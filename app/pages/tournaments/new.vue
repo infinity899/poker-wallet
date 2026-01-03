@@ -1,0 +1,283 @@
+<script setup lang="ts">
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
+import type { Currency, SessionType } from '~/types'
+
+const tournamentsStore = useTournamentsStore()
+const referenceStore = useReferenceStore()
+const router = useRouter()
+
+const form = reactive({
+  date: new Date().toISOString().split('T')[0] as string,
+  type: 'online' as SessionType,
+  currency: 'USD' as Currency,
+  name: '',
+  buyIn: 0,
+  fee: 0,
+  entries: 0,
+  winnings: 0,
+  venue: '',
+  site: '',
+  fieldSize: undefined as number | undefined,
+  finishPosition: undefined as number | undefined,
+  cashed: false,
+  notes: '',
+  tags: [] as string[]
+})
+
+const errors = reactive<Record<string, string>>({})
+
+const validate = () => {
+  errors.name = ''
+  errors.buyIn = ''
+
+  if (!form.name.trim()) {
+    errors.name = 'Tournament name is required'
+  }
+
+  if (form.buyIn < 0) {
+    errors.buyIn = 'Buy-in must be positive'
+  }
+
+  return !errors.name && !errors.buyIn
+}
+
+const handleSubmit = () => {
+  if (!validate()) return
+
+  tournamentsStore.addTournament({
+    date: form.date,
+    type: form.type,
+    currency: form.currency,
+    name: form.name,
+    buyIn: form.buyIn,
+    fee: form.fee,
+    entries: form.entries,
+    winnings: form.winnings,
+    venue: form.type === 'live' ? form.venue : undefined,
+    site: form.type === 'online' ? form.site : undefined,
+    fieldSize: form.fieldSize,
+    finishPosition: form.finishPosition,
+    cashed: form.cashed,
+    notes: form.notes || undefined,
+    tags: form.tags
+  })
+
+  router.push('/tournaments')
+}
+
+const venues = computed(() =>
+  form.type === 'live' ? referenceStore.liveVenues : referenceStore.onlineSites
+)
+
+// Auto-set cashed based on winnings
+watch(() => form.winnings, (val) => {
+  if (val > 0) form.cashed = true
+})
+</script>
+
+<template>
+  <div class="p-4 lg:p-0 max-w-2xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center gap-4 mb-6">
+      <NuxtLink to="/tournaments" class="p-2 hover:bg-gray-100 rounded-lg">
+        <ArrowLeftIcon class="w-5 h-5 text-gray-600" />
+      </NuxtLink>
+      <h1 class="text-2xl font-bold text-gray-900">New Tournament</h1>
+    </div>
+
+    <form @submit.prevent="handleSubmit" class="space-y-6">
+      <div class="card p-6 space-y-4">
+        <!-- Date & Type -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <input
+              v-model="form.date"
+              type="date"
+              class="input"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+            <select v-model="form.type" class="input">
+              <option value="live">Live</option>
+              <option value="online">Online</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Name -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tournament Name</label>
+          <input
+            v-model="form.name"
+            type="text"
+            placeholder="e.g., Sunday Million"
+            class="input"
+            :class="{ 'input-error': errors.name }"
+          />
+          <p v-if="errors.name" class="mt-1 text-sm text-danger-600">{{ errors.name }}</p>
+        </div>
+
+        <!-- Currency & Venue/Site -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+            <select v-model="form.currency" class="input">
+              <option v-for="currency in referenceStore.currencies" :key="currency" :value="currency">
+                {{ currency }}
+              </option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              {{ form.type === 'live' ? 'Venue' : 'Site' }}
+            </label>
+            <select
+              v-if="form.type === 'live'"
+              v-model="form.venue"
+              class="input"
+            >
+              <option value="">Select venue</option>
+              <option v-for="venue in venues" :key="venue.id" :value="venue.name">
+                {{ venue.name }}
+              </option>
+            </select>
+            <select
+              v-else
+              v-model="form.site"
+              class="input"
+            >
+              <option value="">Select site</option>
+              <option v-for="site in venues" :key="site.id" :value="site.name">
+                {{ site.name }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Buy-in & Fee -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Buy-in ($)</label>
+            <input
+              v-model.number="form.buyIn"
+              type="number"
+              min="0"
+              class="input"
+              :class="{ 'input-error': errors.buyIn }"
+            />
+            <p v-if="errors.buyIn" class="mt-1 text-sm text-danger-600">{{ errors.buyIn }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Fee ($)</label>
+            <input
+              v-model.number="form.fee"
+              type="number"
+              min="0"
+              class="input"
+            />
+          </div>
+        </div>
+
+        <!-- Entries & Winnings -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Re-entries</label>
+            <input
+              v-model.number="form.entries"
+              type="number"
+              min="0"
+              class="input"
+            />
+            <p class="mt-1 text-xs text-gray-500">0 = single entry</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Winnings ($)</label>
+            <input
+              v-model.number="form.winnings"
+              type="number"
+              min="0"
+              class="input"
+            />
+          </div>
+        </div>
+
+        <!-- Field Size & Finish -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Field Size</label>
+            <input
+              v-model.number="form.fieldSize"
+              type="number"
+              min="1"
+              class="input"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Finish Position</label>
+            <input
+              v-model.number="form.finishPosition"
+              type="number"
+              min="1"
+              class="input"
+            />
+          </div>
+        </div>
+
+        <!-- Cashed -->
+        <div class="flex items-center gap-2">
+          <input
+            v-model="form.cashed"
+            type="checkbox"
+            id="cashed"
+            class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+          />
+          <label for="cashed" class="text-sm font-medium text-gray-700">
+            Cashed (In The Money)
+          </label>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+          <textarea
+            v-model="form.notes"
+            rows="3"
+            class="input"
+            placeholder="Optional notes..."
+          />
+        </div>
+
+        <!-- Tags -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Tags</label>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="tag in referenceStore.tags"
+              :key="tag.id"
+              type="button"
+              @click="form.tags.includes(tag.name) ? form.tags = form.tags.filter(t => t !== tag.name) : form.tags.push(tag.name)"
+              class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+              :class="form.tags.includes(tag.name)
+                ? 'bg-primary-100 text-primary-700 ring-2 ring-primary-500'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+            >
+              {{ tag.name }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="flex gap-4">
+        <NuxtLink to="/tournaments" class="btn-secondary flex-1">
+          Cancel
+        </NuxtLink>
+        <button type="submit" class="btn-primary flex-1">
+          Save Tournament
+        </button>
+      </div>
+    </form>
+  </div>
+</template>

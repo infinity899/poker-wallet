@@ -1,0 +1,114 @@
+{
+  "venues": [
+    {
+      "id": "1",
+      "name": "Bellagio",
+      "type": "live",
+      "location": "Las Vegas, NV"
+    },
+    {
+      "id": "2",
+      "name": "Aria",
+      "type": "live",
+      "location": "Las Vegas, NV"
+    },
+    {
+      "id": "3",
+      "name": "Wynn",
+      "type": "live",
+      "location": "Las Vegas, NV"
+    },
+    {
+      "id": "4",
+      "name": "Commerce Casino",
+      "type": "live",
+      "location": "Los Angeles, CA"
+    },
+    {
+      "id": "5",
+      "name": "Venetian",
+      "type": "live",
+      "location": "Las Vegas, NV"
+    },
+    {
+      "id": "6",
+      "name": "PokerStars",
+      "type": "online"
+    },
+    {
+      "id": "7",
+      "name": "GGPoker",
+      "type": "online"
+    },
+    {
+      "id": "8",
+      "name": "888poker",
+      "type": "online"
+    },
+    {
+      "id": "9",
+      "name": "partypoker",
+      "type": "online"
+    },
+    {
+      "id": "10",
+      "name": "WPT Global",
+      "type": "online"
+    }
+  ],
+  "tags": [
+    {
+      "id": "1",
+      "name": "Deepstack",
+      "color": "#3b82f6"
+    },
+    {
+      "id": "2",
+      "name": "Turbo",
+      "color": "#ef4444"
+    },
+    {
+      "id": "3",
+      "name": "Good Run",
+      "color": "#22c55e"
+    },
+    {
+      "id": "4",
+      "name": "Bad Beat",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "5",
+      "name": "Soft Table",
+      "color": "#8b5cf6"
+    },
+    {
+      "id": "6",
+      "name": "Tough Table",
+      "color": "#64748b"
+    },
+    {
+      "id": "7",
+      "name": "Tilted",
+      "color": "#dc2626"
+    },
+    {
+      "id": "8",
+      "name": "Shot Take",
+      "color": "#0891b2"
+    }
+  ],
+  "currencies": [
+    "USD",
+    "EUR",
+    "GBP",
+    "CAD",
+    "RON"
+  ],
+  "gameTypes": [
+    "NLH",
+    "PLO",
+    "PLO5",
+    "Mixed"
+  ]
+}
