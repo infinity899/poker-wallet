@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod';
 
 export const sessionSchema = z.object({
   date: z.string().min(1, 'Date is required'),
@@ -22,18 +22,20 @@ export const sessionSchema = z.object({
   cashOutTotal: z.number().min(0).optional(),
   rakeFees: z.number().min(0).optional(),
   notes: z.string().optional(),
-  tags: z.array(z.string()).default([])
+  tags: z.array(z.string()).default([]),
 }).refine(
-  data => {
+  (data) => {
     // If live, should have location; if online, should have site
-    if (data.type === 'live') return true // location optional but recommended
-    return true // site optional but recommended
+    if (data.type === 'live') {
+      return true;
+    } // location optional but recommended
+    return true; // site optional but recommended
   },
   {
     message: 'Location is recommended for live sessions, site for online',
-    path: ['location']
-  }
-)
+    path: ['location'],
+  },
+);
 
 export const tournamentSchema = z.object({
   date: z.string().min(1, 'Date is required'),
@@ -52,21 +54,21 @@ export const tournamentSchema = z.object({
   finishPosition: z.number().int().min(1).optional(),
   cashed: z.boolean().optional(),
   notes: z.string().optional(),
-  tags: z.array(z.string()).default([])
-})
+  tags: z.array(z.string()).default([]),
+});
 
 export const venueSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   type: z.enum(['live', 'online']),
-  location: z.string().optional()
-})
+  location: z.string().optional(),
+});
 
 export const tagSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format')
-})
+  color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Invalid color format'),
+});
 
-export type SessionFormData = z.infer<typeof sessionSchema>
-export type TournamentFormData = z.infer<typeof tournamentSchema>
-export type VenueFormData = z.infer<typeof venueSchema>
-export type TagFormData = z.infer<typeof tagSchema>
+export type SessionFormData = z.infer<typeof sessionSchema>;
+export type TournamentFormData = z.infer<typeof tournamentSchema>;
+export type VenueFormData = z.infer<typeof venueSchema>;
+export type TagFormData = z.infer<typeof tagSchema>;

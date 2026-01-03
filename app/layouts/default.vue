@@ -1,16 +1,5 @@
-<script setup lang="ts">
-const { isMobile, isDesktop } = useBreakpoint()
-const router = useRouter()
-
-const showAddModal = ref(false)
-
-const handleFabClick = () => {
-  showAddModal.value = true
-}
-</script>
-
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <!-- Desktop Sidebar -->
     <LayoutAppSidebar
       v-if="isDesktop"
@@ -27,7 +16,7 @@ const handleFabClick = () => {
         class="min-h-screen"
         :class="[
           isMobile ? 'pb-20 pt-0' : 'p-6',
-          !isDesktop && !isMobile ? 'p-4' : ''
+          !isDesktop && !isMobile ? 'p-4' : '',
         ]"
       >
         <slot />
@@ -44,3 +33,13 @@ const handleFabClick = () => {
     <LayoutAppFAB @click="handleFabClick" />
   </div>
 </template>
+
+<script setup lang="ts">
+const { isMobile, isDesktop } = useBreakpoint();
+
+const showAddModal = ref(false);
+
+function handleFabClick() {
+  showAddModal.value = true;
+}
+</script>

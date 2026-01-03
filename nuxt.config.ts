@@ -9,7 +9,7 @@ export default defineNuxtConfig({
   // Modules
   modules: [
     '@nuxtjs/tailwindcss',
-    '@pinia/nuxt'
+    '@pinia/nuxt',
   ],
 
   // App configuration
@@ -19,23 +19,23 @@ export default defineNuxtConfig({
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' },
-        { name: 'description', content: 'Track your poker sessions and tournaments' }
+        { name: 'description', content: 'Track your poker sessions and tournaments' },
       ],
       link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
-      ]
-    }
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+      ],
+    },
   },
 
   // TypeScript configuration
   typescript: {
     strict: true,
-    typeCheck: true
+    typeCheck: true,
   },
 
   // Tailwind module options
   tailwindcss: {
     cssPath: '~/assets/css/tailwind.css',
-    configPath: 'tailwind.config'
-  }
-})
+    configPath: 'tailwind.config',
+  },
+});

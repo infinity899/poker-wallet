@@ -1,76 +1,3 @@
-<script setup lang="ts">
-import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
-import type { GameType, Currency, SessionType } from '~/types'
-
-const sessionsStore = useSessionsStore()
-const referenceStore = useReferenceStore()
-const router = useRouter()
-const route = useRoute()
-
-const sessionId = computed(() => route.params.id as string)
-const session = computed(() => sessionsStore.getSessionById(sessionId.value))
-
-// Redirect if session not found
-if (!session.value) {
-  router.push('/sessions')
-}
-
-const form = reactive({
-  date: session.value?.date || '',
-  type: session.value?.type || 'live' as SessionType,
-  game: session.value?.game || 'NLH' as GameType,
-  currency: session.value?.currency || 'USD' as Currency,
-  stake: session.value?.stake || '',
-  result: session.value?.result || 0,
-  duration: session.value?.duration || 120,
-  location: session.value?.location || '',
-  site: session.value?.site || '',
-  notes: session.value?.notes || '',
-  tags: session.value?.tags || [] as string[]
-})
-
-const errors = reactive<Record<string, string>>({})
-
-const validate = () => {
-  errors.stake = ''
-  errors.duration = ''
-
-  if (!form.stake || !/^\d+(?:\.\d+)?\s*\/\s*\d+(?:\.\d+)?$/.test(form.stake)) {
-    errors.stake = 'Enter valid stakes (e.g., 1/2)'
-  }
-
-  if (form.duration < 1) {
-    errors.duration = 'Duration must be at least 1 minute'
-  }
-
-  return !errors.stake && !errors.duration
-}
-
-const handleSubmit = () => {
-  if (!validate()) return
-
-  sessionsStore.updateSession(sessionId.value, {
-    date: form.date,
-    type: form.type,
-    game: form.game,
-    currency: form.currency,
-    stake: form.stake,
-    result: form.result,
-    duration: form.duration,
-    location: form.type === 'live' ? form.location : undefined,
-    site: form.type === 'online' ? form.site : undefined,
-    notes: form.notes || undefined,
-    tags: form.tags
-  })
-
-  router.push('/sessions')
-}
-
-const venues = computed(() =>
-  form.type === 'live' ? referenceStore.liveVenues : referenceStore.onlineSites
-)
-</script>
-
 <template>
   <div class="p-4 lg:p-0 max-w-2xl mx-auto">
     <!-- Header -->
@@ -78,10 +5,12 @@ const venues = computed(() =>
       <NuxtLink to="/sessions" class="p-2 hover:bg-gray-100 rounded-lg">
         <ArrowLeftIcon class="w-5 h-5 text-gray-600" />
       </NuxtLink>
-      <h1 class="text-2xl font-bold text-gray-900">Edit Session</h1>
+      <h1 class="text-2xl font-bold text-gray-900">
+        Edit Session
+      </h1>
     </div>
 
-    <form @submit.prevent="handleSubmit" class="space-y-6">
+    <form class="space-y-6" @submit.prevent="handleSubmit">
       <div class="card p-6 space-y-4">
         <!-- Date & Type -->
         <div class="grid grid-cols-2 gap-4">
@@ -91,13 +20,17 @@ const venues = computed(() =>
               v-model="form.date"
               type="date"
               class="input"
-            />
+            >
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
             <select v-model="form.type" class="input">
-              <option value="live">Live</option>
-              <option value="online">Online</option>
+              <option value="live">
+                Live
+              </option>
+              <option value="online">
+                Online
+              </option>
             </select>
           </div>
         </div>
@@ -120,8 +53,10 @@ const venues = computed(() =>
               placeholder="1/2"
               class="input"
               :class="{ 'input-error': errors.stake }"
-            />
-            <p v-if="errors.stake" class="mt-1 text-sm text-danger-600">{{ errors.stake }}</p>
+            >
+            <p v-if="errors.stake" class="mt-1 text-sm text-danger-600">
+              {{ errors.stake }}
+            </p>
           </div>
         </div>
 
@@ -144,7 +79,9 @@ const venues = computed(() =>
               v-model="form.location"
               class="input"
             >
-              <option value="">Select venue</option>
+              <option value="">
+                Select venue
+              </option>
               <option v-for="venue in venues" :key="venue.id" :value="venue.name">
                 {{ venue.name }}
               </option>
@@ -154,7 +91,9 @@ const venues = computed(() =>
               v-model="form.site"
               class="input"
             >
-              <option value="">Select site</option>
+              <option value="">
+                Select site
+              </option>
               <option v-for="site in venues" :key="site.id" :value="site.name">
                 {{ site.name }}
               </option>
@@ -171,7 +110,7 @@ const venues = computed(() =>
               type="number"
               step="1"
               class="input"
-            />
+            >
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
@@ -181,8 +120,10 @@ const venues = computed(() =>
               min="1"
               class="input"
               :class="{ 'input-error': errors.duration }"
-            />
-            <p v-if="errors.duration" class="mt-1 text-sm text-danger-600">{{ errors.duration }}</p>
+            >
+            <p v-if="errors.duration" class="mt-1 text-sm text-danger-600">
+              {{ errors.duration }}
+            </p>
           </div>
         </div>
 
@@ -205,11 +146,11 @@ const venues = computed(() =>
               v-for="tag in referenceStore.tags"
               :key="tag.id"
               type="button"
-              @click="form.tags.includes(tag.name) ? form.tags = form.tags.filter(t => t !== tag.name) : form.tags.push(tag.name)"
               class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
               :class="form.tags.includes(tag.name)
                 ? 'bg-primary-100 text-primary-700 ring-2 ring-primary-500'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+              @click="form.tags.includes(tag.name) ? form.tags = form.tags.filter(t => t !== tag.name) : form.tags.push(tag.name)"
             >
               {{ tag.name }}
             </button>
@@ -229,3 +170,78 @@ const venues = computed(() =>
     </form>
   </div>
 </template>
+
+<script setup lang="ts">
+import type { Currency, GameType, SessionType } from '~/types';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
+
+const sessionsStore = useSessionsStore();
+const referenceStore = useReferenceStore();
+const router = useRouter();
+const route = useRoute();
+
+const sessionId = computed(() => route.params.id as string);
+const session = computed(() => sessionsStore.getSessionById(sessionId.value));
+
+// Redirect if session not found
+if (!session.value) {
+  router.push('/sessions');
+}
+
+const form = reactive({
+  date: session.value?.date || '',
+  type: session.value?.type || 'live' as SessionType,
+  game: session.value?.game || 'NLH' as GameType,
+  currency: session.value?.currency || 'USD' as Currency,
+  stake: session.value?.stake || '',
+  result: session.value?.result || 0,
+  duration: session.value?.duration || 120,
+  location: session.value?.location || '',
+  site: session.value?.site || '',
+  notes: session.value?.notes || '',
+  tags: session.value?.tags || [] as string[],
+});
+
+const errors = reactive<Record<string, string>>({});
+
+function validate() {
+  errors.stake = '';
+  errors.duration = '';
+
+  if (!form.stake || !/^\d+(?:\.\d+)?\s*\/\s*\d+(?:\.\d+)?$/.test(form.stake)) {
+    errors.stake = 'Enter valid stakes (e.g., 1/2)';
+  }
+
+  if (form.duration < 1) {
+    errors.duration = 'Duration must be at least 1 minute';
+  }
+
+  return !errors.stake && !errors.duration;
+}
+
+function handleSubmit() {
+  if (!validate()) {
+    return;
+  }
+
+  sessionsStore.updateSession(sessionId.value, {
+    date: form.date,
+    type: form.type,
+    game: form.game,
+    currency: form.currency,
+    stake: form.stake,
+    result: form.result,
+    duration: form.duration,
+    location: form.type === 'live' ? form.location : undefined,
+    site: form.type === 'online' ? form.site : undefined,
+    notes: form.notes || undefined,
+    tags: form.tags,
+  });
+
+  router.push('/sessions');
+}
+
+const venues = computed(() =>
+  form.type === 'live' ? referenceStore.liveVenues : referenceStore.onlineSites,
+);
+</script>

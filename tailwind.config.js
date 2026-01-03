@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     './components/**/*.{js,vue,ts}',
     './layouts/**/*.vue',
@@ -7,7 +8,7 @@ export default {
     './composables/**/*.{js,ts}',
     './plugins/**/*.{js,ts}',
     './app.vue',
-    './error.vue'
+    './error.vue',
   ],
   theme: {
     extend: {
@@ -23,7 +24,7 @@ export default {
           700: '#1d4ed8',
           800: '#1e40af',
           900: '#1e3a8a',
-          950: '#172554'
+          950: '#172554',
         },
         success: {
           50: '#f0fdf4',
@@ -35,7 +36,7 @@ export default {
           600: '#16a34a',
           700: '#15803d',
           800: '#166534',
-          900: '#14532d'
+          900: '#14532d',
         },
         danger: {
           50: '#fef2f2',
@@ -47,7 +48,7 @@ export default {
           600: '#dc2626',
           700: '#b91c1c',
           800: '#991b1b',
-          900: '#7f1d1d'
+          900: '#7f1d1d',
         },
         warning: {
           50: '#fffbeb',
@@ -59,18 +60,18 @@ export default {
           600: '#d97706',
           700: '#b45309',
           800: '#92400e',
-          900: '#78350f'
-        }
+          900: '#78350f',
+        },
       },
       screens: {
-        'xs': '475px'
+        xs: '475px',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif']
-      }
-    }
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+    },
   },
   plugins: [
-    require('@tailwindcss/forms')
-  ]
-}
+    require('@tailwindcss/forms'),
+  ],
+};

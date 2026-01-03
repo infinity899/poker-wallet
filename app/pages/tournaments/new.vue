@@ -1,80 +1,3 @@
-<script setup lang="ts">
-import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
-import type { Currency, SessionType } from '~/types'
-
-const tournamentsStore = useTournamentsStore()
-const referenceStore = useReferenceStore()
-const router = useRouter()
-
-const form = reactive({
-  date: new Date().toISOString().split('T')[0] as string,
-  type: 'online' as SessionType,
-  currency: 'USD' as Currency,
-  name: '',
-  buyIn: 0,
-  fee: 0,
-  entries: 0,
-  winnings: 0,
-  venue: '',
-  site: '',
-  fieldSize: undefined as number | undefined,
-  finishPosition: undefined as number | undefined,
-  cashed: false,
-  notes: '',
-  tags: [] as string[]
-})
-
-const errors = reactive<Record<string, string>>({})
-
-const validate = () => {
-  errors.name = ''
-  errors.buyIn = ''
-
-  if (!form.name.trim()) {
-    errors.name = 'Tournament name is required'
-  }
-
-  if (form.buyIn < 0) {
-    errors.buyIn = 'Buy-in must be positive'
-  }
-
-  return !errors.name && !errors.buyIn
-}
-
-const handleSubmit = () => {
-  if (!validate()) return
-
-  tournamentsStore.addTournament({
-    date: form.date,
-    type: form.type,
-    currency: form.currency,
-    name: form.name,
-    buyIn: form.buyIn,
-    fee: form.fee,
-    entries: form.entries,
-    winnings: form.winnings,
-    venue: form.type === 'live' ? form.venue : undefined,
-    site: form.type === 'online' ? form.site : undefined,
-    fieldSize: form.fieldSize,
-    finishPosition: form.finishPosition,
-    cashed: form.cashed,
-    notes: form.notes || undefined,
-    tags: form.tags
-  })
-
-  router.push('/tournaments')
-}
-
-const venues = computed(() =>
-  form.type === 'live' ? referenceStore.liveVenues : referenceStore.onlineSites
-)
-
-// Auto-set cashed based on winnings
-watch(() => form.winnings, (val) => {
-  if (val > 0) form.cashed = true
-})
-</script>
-
 <template>
   <div class="p-4 lg:p-0 max-w-2xl mx-auto">
     <!-- Header -->
@@ -82,10 +5,12 @@ watch(() => form.winnings, (val) => {
       <NuxtLink to="/tournaments" class="p-2 hover:bg-gray-100 rounded-lg">
         <ArrowLeftIcon class="w-5 h-5 text-gray-600" />
       </NuxtLink>
-      <h1 class="text-2xl font-bold text-gray-900">New Tournament</h1>
+      <h1 class="text-2xl font-bold text-gray-900">
+        New Tournament
+      </h1>
     </div>
 
-    <form @submit.prevent="handleSubmit" class="space-y-6">
+    <form class="space-y-6" @submit.prevent="handleSubmit">
       <div class="card p-6 space-y-4">
         <!-- Date & Type -->
         <div class="grid grid-cols-2 gap-4">
@@ -95,13 +20,17 @@ watch(() => form.winnings, (val) => {
               v-model="form.date"
               type="date"
               class="input"
-            />
+            >
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
             <select v-model="form.type" class="input">
-              <option value="live">Live</option>
-              <option value="online">Online</option>
+              <option value="live">
+                Live
+              </option>
+              <option value="online">
+                Online
+              </option>
             </select>
           </div>
         </div>
@@ -115,8 +44,10 @@ watch(() => form.winnings, (val) => {
             placeholder="e.g., Sunday Million"
             class="input"
             :class="{ 'input-error': errors.name }"
-          />
-          <p v-if="errors.name" class="mt-1 text-sm text-danger-600">{{ errors.name }}</p>
+          >
+          <p v-if="errors.name" class="mt-1 text-sm text-danger-600">
+            {{ errors.name }}
+          </p>
         </div>
 
         <!-- Currency & Venue/Site -->
@@ -138,7 +69,9 @@ watch(() => form.winnings, (val) => {
               v-model="form.venue"
               class="input"
             >
-              <option value="">Select venue</option>
+              <option value="">
+                Select venue
+              </option>
               <option v-for="venue in venues" :key="venue.id" :value="venue.name">
                 {{ venue.name }}
               </option>
@@ -148,7 +81,9 @@ watch(() => form.winnings, (val) => {
               v-model="form.site"
               class="input"
             >
-              <option value="">Select site</option>
+              <option value="">
+                Select site
+              </option>
               <option v-for="site in venues" :key="site.id" :value="site.name">
                 {{ site.name }}
               </option>
@@ -166,8 +101,10 @@ watch(() => form.winnings, (val) => {
               min="0"
               class="input"
               :class="{ 'input-error': errors.buyIn }"
-            />
-            <p v-if="errors.buyIn" class="mt-1 text-sm text-danger-600">{{ errors.buyIn }}</p>
+            >
+            <p v-if="errors.buyIn" class="mt-1 text-sm text-danger-600">
+              {{ errors.buyIn }}
+            </p>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Fee ($)</label>
@@ -176,7 +113,7 @@ watch(() => form.winnings, (val) => {
               type="number"
               min="0"
               class="input"
-            />
+            >
           </div>
         </div>
 
@@ -189,8 +126,10 @@ watch(() => form.winnings, (val) => {
               type="number"
               min="0"
               class="input"
-            />
-            <p class="mt-1 text-xs text-gray-500">0 = single entry</p>
+            >
+            <p class="mt-1 text-xs text-gray-500">
+              0 = single entry
+            </p>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Winnings ($)</label>
@@ -199,7 +138,7 @@ watch(() => form.winnings, (val) => {
               type="number"
               min="0"
               class="input"
-            />
+            >
           </div>
         </div>
 
@@ -212,7 +151,7 @@ watch(() => form.winnings, (val) => {
               type="number"
               min="1"
               class="input"
-            />
+            >
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Finish Position</label>
@@ -221,18 +160,18 @@ watch(() => form.winnings, (val) => {
               type="number"
               min="1"
               class="input"
-            />
+            >
           </div>
         </div>
 
         <!-- Cashed -->
         <div class="flex items-center gap-2">
           <input
+            id="cashed"
             v-model="form.cashed"
             type="checkbox"
-            id="cashed"
             class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-          />
+          >
           <label for="cashed" class="text-sm font-medium text-gray-700">
             Cashed (In The Money)
           </label>
@@ -257,11 +196,11 @@ watch(() => form.winnings, (val) => {
               v-for="tag in referenceStore.tags"
               :key="tag.id"
               type="button"
-              @click="form.tags.includes(tag.name) ? form.tags = form.tags.filter(t => t !== tag.name) : form.tags.push(tag.name)"
               class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
               :class="form.tags.includes(tag.name)
                 ? 'bg-primary-100 text-primary-700 ring-2 ring-primary-500'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+              @click="form.tags.includes(tag.name) ? form.tags = form.tags.filter(t => t !== tag.name) : form.tags.push(tag.name)"
             >
               {{ tag.name }}
             </button>
@@ -281,3 +220,84 @@ watch(() => form.winnings, (val) => {
     </form>
   </div>
 </template>
+
+<script setup lang="ts">
+import type { Currency, SessionType } from '~/types';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
+
+const tournamentsStore = useTournamentsStore();
+const referenceStore = useReferenceStore();
+const router = useRouter();
+
+const form = reactive({
+  date: new Date().toISOString().split('T')[0] as string,
+  type: 'online' as SessionType,
+  currency: 'USD' as Currency,
+  name: '',
+  buyIn: 0,
+  fee: 0,
+  entries: 0,
+  winnings: 0,
+  venue: '',
+  site: '',
+  fieldSize: undefined as number | undefined,
+  finishPosition: undefined as number | undefined,
+  cashed: false,
+  notes: '',
+  tags: [] as string[],
+});
+
+const errors = reactive<Record<string, string>>({});
+
+function validate() {
+  errors.name = '';
+  errors.buyIn = '';
+
+  if (!form.name.trim()) {
+    errors.name = 'Tournament name is required';
+  }
+
+  if (form.buyIn < 0) {
+    errors.buyIn = 'Buy-in must be positive';
+  }
+
+  return !errors.name && !errors.buyIn;
+}
+
+function handleSubmit() {
+  if (!validate()) {
+    return;
+  }
+
+  tournamentsStore.addTournament({
+    date: form.date,
+    type: form.type,
+    currency: form.currency,
+    name: form.name,
+    buyIn: form.buyIn,
+    fee: form.fee,
+    entries: form.entries,
+    winnings: form.winnings,
+    venue: form.type === 'live' ? form.venue : undefined,
+    site: form.type === 'online' ? form.site : undefined,
+    fieldSize: form.fieldSize,
+    finishPosition: form.finishPosition,
+    cashed: form.cashed,
+    notes: form.notes || undefined,
+    tags: form.tags,
+  });
+
+  router.push('/tournaments');
+}
+
+const venues = computed(() =>
+  form.type === 'live' ? referenceStore.liveVenues : referenceStore.onlineSites,
+);
+
+// Auto-set cashed based on winnings
+watch(() => form.winnings, (val) => {
+  if (val > 0) {
+    form.cashed = true;
+  }
+});
+</script>

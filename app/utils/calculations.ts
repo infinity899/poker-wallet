@@ -1,4 +1,4 @@
-import type { CashSession, SessionStats, Tournament, TournamentStats } from '~/types'
+import type { CashSession, SessionStats, Tournament, TournamentStats } from '~/types';
 
 export function calculateSessionStats(sessions: CashSession[]): SessionStats {
   if (sessions.length === 0) {
@@ -13,38 +13,40 @@ export function calculateSessionStats(sessions: CashSession[]): SessionStats {
       worstSession: 0,
       currentStreak: 0,
       winningSessions: 0,
-      losingSessions: 0
-    }
+      losingSessions: 0,
+    };
   }
 
-  const totalProfit = sessions.reduce((sum, s) => sum + s.result, 0)
-  const totalMinutes = sessions.reduce((sum, s) => sum + s.duration, 0)
-  const totalHours = totalMinutes / 60
+  const totalProfit = sessions.reduce((sum, s) => sum + s.result, 0);
+  const totalMinutes = sessions.reduce((sum, s) => sum + s.duration, 0);
+  const totalHours = totalMinutes / 60;
 
-  const winningSessions = sessions.filter(s => s.result > 0).length
-  const losingSessions = sessions.filter(s => s.result < 0).length
+  const winningSessions = sessions.filter(s => s.result > 0).length;
+  const losingSessions = sessions.filter(s => s.result < 0).length;
 
-  const results = sessions.map(s => s.result)
-  const bestSession = Math.max(...results)
-  const worstSession = Math.min(...results)
+  const results = sessions.map(s => s.result);
+  const bestSession = Math.max(...results);
+  const worstSession = Math.min(...results);
 
   // Calculate current streak (sort by date descending first)
   const sortedSessions = [...sessions].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  )
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
 
-  let currentStreak = 0
+  let currentStreak = 0;
   if (sortedSessions.length > 0) {
-    const firstResult = sortedSessions[0]!.result
-    const streakType = firstResult > 0 ? 'win' : firstResult < 0 ? 'loss' : 'even'
+    const firstResult = sortedSessions[0]!.result;
+    const streakType = firstResult > 0 ? 'win' : firstResult < 0 ? 'loss' : 'even';
 
     for (const session of sortedSessions) {
       if (streakType === 'win' && session.result > 0) {
-        currentStreak++
-      } else if (streakType === 'loss' && session.result < 0) {
-        currentStreak--
-      } else {
-        break
+        currentStreak++;
+      }
+      else if (streakType === 'loss' && session.result < 0) {
+        currentStreak--;
+      }
+      else {
+        break;
       }
     }
   }
@@ -60,8 +62,8 @@ export function calculateSessionStats(sessions: CashSession[]): SessionStats {
     worstSession,
     currentStreak,
     winningSessions,
-    losingSessions
-  }
+    losingSessions,
+  };
 }
 
 export function calculateTournamentStats(tournaments: Tournament[]): TournamentStats {
@@ -78,29 +80,29 @@ export function calculateTournamentStats(tournaments: Tournament[]): TournamentS
       itmPercentage: 0,
       avgFinish: 0,
       bestFinish: 0,
-      avgFieldSize: 0
-    }
+      avgFieldSize: 0,
+    };
   }
 
   const totalBuyIns = tournaments.reduce(
     (sum, t) => sum + (t.buyIn + t.fee) * (t.entries + 1),
-    0
-  )
-  const totalWinnings = tournaments.reduce((sum, t) => sum + t.winnings, 0)
-  const totalProfit = totalWinnings - totalBuyIns
+    0,
+  );
+  const totalWinnings = tournaments.reduce((sum, t) => sum + t.winnings, 0);
+  const totalProfit = totalWinnings - totalBuyIns;
 
   // ITM: either explicit cashed flag or winnings > 0
   const itmTournaments = tournaments.filter(
-    t => t.cashed === true || (t.cashed === undefined && t.winnings > 0)
-  ).length
+    t => t.cashed === true || (t.cashed === undefined && t.winnings > 0),
+  ).length;
 
   const finishes = tournaments
     .filter(t => t.finishPosition !== undefined && t.finishPosition !== null)
-    .map(t => t.finishPosition!)
+    .map(t => t.finishPosition!);
 
   const fieldSizes = tournaments
     .filter(t => t.fieldSize !== undefined && t.fieldSize !== null)
-    .map(t => t.fieldSize!)
+    .map(t => t.fieldSize!);
 
   return {
     totalTournaments: tournaments.length,
@@ -118,111 +120,113 @@ export function calculateTournamentStats(tournaments: Tournament[]): TournamentS
     bestFinish: finishes.length > 0 ? Math.min(...finishes) : 0,
     avgFieldSize: fieldSizes.length > 0
       ? fieldSizes.reduce((a, b) => a + b, 0) / fieldSizes.length
-      : 0
-  }
+      : 0,
+  };
 }
 
 export function calculateCumulativeProfit(
   items: (CashSession | Tournament)[],
-  getResult: (item: CashSession | Tournament) => number
+  getResult: (item: CashSession | Tournament) => number,
 ): { date: string; profit: number; cumulative: number }[] {
   const sorted = [...items].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  )
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
 
-  let cumulative = 0
-  return sorted.map(item => {
-    const profit = getResult(item)
-    cumulative += profit
+  let cumulative = 0;
+  return sorted.map((item) => {
+    const profit = getResult(item);
+    cumulative += profit;
     return {
       date: item.date,
       profit,
-      cumulative
-    }
-  })
+      cumulative,
+    };
+  });
 }
 
 export function calculateHourlyRateTrend(
   sessions: CashSession[],
-  windowSize: number = 10
+  windowSize: number = 10,
 ): { date: string; hourlyRate: number }[] {
   const sorted = [...sessions].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  )
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
 
-  const result: { date: string; hourlyRate: number }[] = []
+  const result: { date: string; hourlyRate: number }[] = [];
 
   for (let i = windowSize - 1; i < sorted.length; i++) {
-    const window = sorted.slice(i - windowSize + 1, i + 1)
-    const totalProfit = window.reduce((sum, s) => sum + s.result, 0)
-    const totalHours = window.reduce((sum, s) => sum + s.duration, 0) / 60
+    const window = sorted.slice(i - windowSize + 1, i + 1);
+    const totalProfit = window.reduce((sum, s) => sum + s.result, 0);
+    const totalHours = window.reduce((sum, s) => sum + s.duration, 0) / 60;
 
     result.push({
       date: sorted[i]!.date,
-      hourlyRate: totalHours > 0 ? totalProfit / totalHours : 0
-    })
+      hourlyRate: totalHours > 0 ? totalProfit / totalHours : 0,
+    });
   }
 
-  return result
+  return result;
 }
 
 export function calculateProfitDistribution(
   sessions: CashSession[],
-  bucketSize: number = 100
+  bucketSize: number = 100,
 ): { bucket: string; count: number }[] {
-  if (sessions.length === 0) return []
+  if (sessions.length === 0) {
+    return [];
+  }
 
-  const results = sessions.map(s => s.result)
-  const min = Math.min(...results)
-  const max = Math.max(...results)
+  const results = sessions.map(s => s.result);
+  const min = Math.min(...results);
+  const max = Math.max(...results);
 
   // Create buckets
-  const bucketStart = Math.floor(min / bucketSize) * bucketSize
-  const bucketEnd = Math.ceil(max / bucketSize) * bucketSize
+  const bucketStart = Math.floor(min / bucketSize) * bucketSize;
+  const bucketEnd = Math.ceil(max / bucketSize) * bucketSize;
 
-  const buckets: Map<string, number> = new Map()
+  const buckets: Map<string, number> = new Map();
 
   for (let i = bucketStart; i < bucketEnd; i += bucketSize) {
-    const label = i >= 0 ? `$${i}-${i + bucketSize}` : `$${i} to $${i + bucketSize}`
-    buckets.set(label, 0)
+    const label = i >= 0 ? `$${i}-${i + bucketSize}` : `$${i} to $${i + bucketSize}`;
+    buckets.set(label, 0);
   }
 
   // Fill buckets
   for (const result of results) {
-    const bucketIndex = Math.floor(result / bucketSize) * bucketSize
+    const bucketIndex = Math.floor(result / bucketSize) * bucketSize;
     const label = bucketIndex >= 0
       ? `$${bucketIndex}-${bucketIndex + bucketSize}`
-      : `$${bucketIndex} to $${bucketIndex + bucketSize}`
-    buckets.set(label, (buckets.get(label) || 0) + 1)
+      : `$${bucketIndex} to $${bucketIndex + bucketSize}`;
+    buckets.set(label, (buckets.get(label) || 0) + 1);
   }
 
-  return Array.from(buckets.entries()).map(([bucket, count]) => ({ bucket, count }))
+  return Array.from(buckets.entries()).map(([bucket, count]) => ({ bucket, count }));
 }
 
 export function calculateROITrend(
   tournaments: Tournament[],
-  windowSize: number = 10
+  windowSize: number = 10,
 ): { date: string; roi: number }[] {
   const sorted = [...tournaments].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  )
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
 
-  const result: { date: string; roi: number }[] = []
+  const result: { date: string; roi: number }[] = [];
 
   for (let i = windowSize - 1; i < sorted.length; i++) {
-    const window = sorted.slice(i - windowSize + 1, i + 1)
+    const window = sorted.slice(i - windowSize + 1, i + 1);
     const totalBuyIns = window.reduce(
       (sum, t) => sum + (t.buyIn + t.fee) * (t.entries + 1),
-      0
-    )
-    const totalWinnings = window.reduce((sum, t) => sum + t.winnings, 0)
-    const roi = totalBuyIns > 0 ? ((totalWinnings - totalBuyIns) / totalBuyIns) * 100 : 0
+      0,
+    );
+    const totalWinnings = window.reduce((sum, t) => sum + t.winnings, 0);
+    const roi = totalBuyIns > 0 ? ((totalWinnings - totalBuyIns) / totalBuyIns) * 100 : 0;
 
     result.push({
       date: sorted[i]!.date,
-      roi
-    })
+      roi,
+    });
   }
 
-  return result
+  return result;
 }

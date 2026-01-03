@@ -1,17 +1,17 @@
-import type { Currency } from '~/types'
+import type { Currency } from '~/types';
 import {
   formatCurrency,
+  formatHourlyRate,
   formatProfit,
   formatProfitShort,
-  formatHourlyRate
-} from '~/utils/formatters'
+} from '~/utils/formatters';
 
 export function useCurrency() {
-  const defaultCurrency = ref<Currency>('USD')
+  const defaultCurrency = ref<Currency>('USD');
 
   const setDefaultCurrency = (currency: Currency) => {
-    defaultCurrency.value = currency
-  }
+    defaultCurrency.value = currency;
+  };
 
   return {
     defaultCurrency: readonly(defaultCurrency),
@@ -22,6 +22,6 @@ export function useCurrency() {
       formatProfit(amount, currency ?? defaultCurrency.value),
     formatProfitShort,
     formatHourlyRate: (amount: number, currency?: Currency) =>
-      formatHourlyRate(amount, currency ?? defaultCurrency.value)
-  }
+      formatHourlyRate(amount, currency ?? defaultCurrency.value),
+  };
 }
