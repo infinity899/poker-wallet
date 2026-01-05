@@ -1,5 +1,7 @@
-import type { NewTournament, Tournament, TournamentFilters, TournamentStats } from '~/types';
+import type { DbTournament, NewTournament, Tournament, TournamentFilters, TournamentStats } from '~/types';
 import { defineStore } from 'pinia';
+import { dbTournamentToTournament, tournamentToDbTournament } from '~/composables/useDatabase';
+import { useTypedSupabaseClient } from '~/composables/useTypedSupabase';
 import { isDateInRange } from '~/composables/useFilters';
 import { DEFAULT_TOURNAMENT_FILTERS } from '~/types';
 import { calculateTournamentStats } from '~/utils/calculations';
@@ -7,11 +9,20 @@ import { calculateTournamentStats } from '~/utils/calculations';
 const STORAGE_KEY = 'poker-wallet-tournaments';
 
 export const useTournamentsStore = defineStore('tournaments', () => {
+  const supabase = useTypedSupabaseClient();
+  const user = useSupabaseUser();
+
   // State
   const tournaments = ref<Tournament[]>([]);
   const loading = ref(false);
   const initialized = ref(false);
   const filters = ref<TournamentFilters>({ ...DEFAULT_TOURNAMENT_FILTERS });
+
+  // Get auth store (lazy to avoid circular dependency)
+  const getAuthStore = () => useAuthStore();
+
+  // Check if we're in demo mode
+  const isDemoMode = computed(() => getAuthStore().isDemoMode);
 
   // Getters
   const filteredTournaments = computed(() => {
@@ -129,18 +140,20 @@ export const useTournamentsStore = defineStore('tournaments', () => {
 
     loading.value = true;
     try {
-      // Try to load from localStorage first
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        tournaments.value = JSON.parse(stored);
+      // Wait for auth store to load user settings before checking isDemoMode
+      const authStore = getAuthStore();
+      await authStore.waitForSettings();
+
+      // Now isDemoMode will have the correct value
+      const demoMode = authStore.isDemoMode;
+
+      if (demoMode) {
+        // Demo mode: load from localStorage or mock data
+        await loadFromLocalStorage();
       }
       else {
-        // Load from mock data
-        const response = await fetch('/data/tournaments.json');
-        if (response.ok) {
-          tournaments.value = await response.json();
-          saveToStorage();
-        }
+        // Database mode: load from Supabase
+        await loadFromDatabase();
       }
     }
     catch (error) {
@@ -152,8 +165,51 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     }
   }
 
+  async function loadFromLocalStorage() {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      tournaments.value = JSON.parse(stored);
+    }
+    else {
+      // Load from mock data
+      const response = await fetch('/data/tournaments.json');
+      if (response.ok) {
+        tournaments.value = await response.json();
+        saveToStorage();
+      }
+    }
+  }
+
+  async function loadFromDatabase() {
+    if (!user.value) {
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('tournaments')
+      .select('*')
+      .eq('user_id', user.value!.sub)
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Failed to load tournaments from database:', error);
+      return;
+    }
+
+    tournaments.value = (data || []).map((row: DbTournament) => dbTournamentToTournament(row));
+  }
+
+  // Reload data (useful when switching modes)
+  async function reload() {
+    initialized.value = false;
+    tournaments.value = [];
+    await initialize();
+  }
+
   function saveToStorage() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tournaments.value));
+    if (isDemoMode.value) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tournaments.value));
+    }
   }
 
   function addTournament(data: NewTournament): Tournament {
@@ -259,6 +315,7 @@ export const useTournamentsStore = defineStore('tournaments', () => {
 
     // Actions
     initialize,
+    reload,
     addTournament,
     updateTournament,
     deleteTournament,

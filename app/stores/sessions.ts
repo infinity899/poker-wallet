@@ -1,6 +1,8 @@
-import type { CashSession, NewCashSession, SessionFilters, SessionStats } from '~/types';
+import type { CashSession, DbSession, NewCashSession, SessionFilters, SessionStats } from '~/types';
 import { defineStore } from 'pinia';
+import { dbSessionToSession, sessionToDbSession } from '~/composables/useDatabase';
 import { isDateInRange } from '~/composables/useFilters';
+import { useTypedSupabaseClient } from '~/composables/useTypedSupabase';
 import { DEFAULT_SESSION_FILTERS } from '~/types';
 import { calculateSessionStats } from '~/utils/calculations';
 import { parseStake } from '~/utils/formatters';
@@ -8,11 +10,20 @@ import { parseStake } from '~/utils/formatters';
 const STORAGE_KEY = 'poker-wallet-sessions';
 
 export const useSessionsStore = defineStore('sessions', () => {
+  const supabase = useTypedSupabaseClient();
+  const user = useSupabaseUser();
+
   // State
   const sessions = ref<CashSession[]>([]);
   const loading = ref(false);
   const initialized = ref(false);
   const filters = ref<SessionFilters>({ ...DEFAULT_SESSION_FILTERS });
+
+  // Get auth store (lazy to avoid circular dependency)
+  const getAuthStore = () => useAuthStore();
+
+  // Check if we're in demo mode
+  const isDemoMode = computed(() => getAuthStore().isDemoMode);
 
   // Getters
   const filteredSessions = computed(() => {
@@ -139,18 +150,20 @@ export const useSessionsStore = defineStore('sessions', () => {
 
     loading.value = true;
     try {
-      // Try to load from localStorage first
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        sessions.value = JSON.parse(stored);
+      // Wait for auth store to load user settings before checking isDemoMode
+      const authStore = getAuthStore();
+      await authStore.waitForSettings();
+
+      // Now isDemoMode will have the correct value
+      const demoMode = authStore.isDemoMode;
+
+      if (demoMode) {
+        // Demo mode: load from localStorage or mock data
+        await loadFromLocalStorage();
       }
       else {
-        // Load from mock data
-        const response = await fetch('/data/sessions.json');
-        if (response.ok) {
-          sessions.value = await response.json();
-          saveToStorage();
-        }
+        // Database mode: load from Supabase
+        await loadFromDatabase();
       }
     }
     catch (error) {
@@ -162,29 +175,101 @@ export const useSessionsStore = defineStore('sessions', () => {
     }
   }
 
-  function saveToStorage() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions.value));
+  async function loadFromLocalStorage() {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      sessions.value = JSON.parse(stored);
+    }
+    else {
+      // Load from mock data
+      const response = await fetch('/data/sessions.json');
+      if (response.ok) {
+        sessions.value = await response.json();
+        saveToStorage();
+      }
+    }
   }
 
-  function addSession(data: NewCashSession): CashSession {
+  async function loadFromDatabase() {
+    if (!user.value) {
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('user_id', user.value!.sub)
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Failed to load sessions from database:', error);
+      return;
+    }
+
+    sessions.value = (data || []).map((row: DbSession) => dbSessionToSession(row));
+  }
+
+  // Reload data (useful when switching modes)
+  async function reload() {
+    initialized.value = false;
+    sessions.value = [];
+    await initialize();
+  }
+
+  function saveToStorage() {
+    if (isDemoMode.value) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions.value));
+    }
+  }
+
+  async function addSession(data: NewCashSession): Promise<CashSession> {
     const now = new Date().toISOString();
     const parsed = parseStake(data.stake);
 
-    const session: CashSession = {
-      ...data,
-      id: crypto.randomUUID(),
-      smallBlind: parsed?.smallBlind ?? 0,
-      bigBlind: parsed?.bigBlind ?? 0,
-      createdAt: now,
-      updatedAt: now,
-    };
+    if (isDemoMode.value) {
+      // Demo mode: save to localStorage
+      const session: CashSession = {
+        ...data,
+        id: crypto.randomUUID(),
+        smallBlind: parsed?.smallBlind ?? 0,
+        bigBlind: parsed?.bigBlind ?? 0,
+        createdAt: now,
+        updatedAt: now,
+      };
 
-    sessions.value.push(session);
-    saveToStorage();
-    return session;
+      sessions.value.push(session);
+      saveToStorage();
+      return session;
+    }
+    else {
+      // Database mode: save to Supabase
+      if (!user.value) {
+        throw new Error('User not authenticated');
+      }
+
+      const dbSession = sessionToDbSession({
+        ...data,
+        smallBlind: parsed?.smallBlind ?? 0,
+        bigBlind: parsed?.bigBlind ?? 0,
+      }, user.value!.sub);
+
+      const { data: inserted, error } = await supabase
+        .from('sessions')
+        .insert(dbSession as any)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      const session = dbSessionToSession(inserted as DbSession);
+      sessions.value.push(session);
+      return session;
+    }
   }
 
-  function updateSession(id: string, updates: Partial<Omit<CashSession, 'id'>>): boolean {
+  async function updateSession(id: string, updates: Partial<Omit<CashSession, 'id'>>): Promise<boolean> {
     const index = sessions.value.findIndex(s => s.id === id);
     if (index === -1) {
       return false;
@@ -193,33 +278,145 @@ export const useSessionsStore = defineStore('sessions', () => {
     const current = sessions.value[index]!;
     const parsed = updates.stake ? parseStake(updates.stake) : null;
 
-    sessions.value[index] = {
-      ...current,
-      ...updates,
-      id: current.id,
-      ...(parsed && { smallBlind: parsed.smallBlind, bigBlind: parsed.bigBlind }),
-      updatedAt: new Date().toISOString(),
-    };
+    if (isDemoMode.value) {
+      // Demo mode: update localStorage
+      sessions.value[index] = {
+        ...current,
+        ...updates,
+        id: current.id,
+        ...(parsed && { smallBlind: parsed.smallBlind, bigBlind: parsed.bigBlind }),
+        updatedAt: new Date().toISOString(),
+      };
 
-    saveToStorage();
-    return true;
+      saveToStorage();
+      return true;
+    }
+    else {
+      // Database mode: update Supabase
+      if (!user.value) {
+        throw new Error('User not authenticated');
+      }
+
+      const dbUpdates: Record<string, any> = {};
+      if (updates.date !== undefined) {
+        dbUpdates.date = updates.date;
+      }
+      if (updates.startTime !== undefined) {
+        dbUpdates.start_time = updates.startTime;
+      }
+      if (updates.endTime !== undefined) {
+        dbUpdates.end_time = updates.endTime;
+      }
+      if (updates.type !== undefined) {
+        dbUpdates.type = updates.type;
+      }
+      if (updates.currency !== undefined) {
+        dbUpdates.currency = updates.currency;
+      }
+      if (updates.stake !== undefined) {
+        dbUpdates.stake = updates.stake;
+      }
+      if (parsed) {
+        dbUpdates.small_blind = parsed.smallBlind;
+        dbUpdates.big_blind = parsed.bigBlind;
+      }
+      if (updates.game !== undefined) {
+        dbUpdates.game = updates.game;
+      }
+      if (updates.result !== undefined) {
+        dbUpdates.result = updates.result;
+      }
+      if (updates.duration !== undefined) {
+        dbUpdates.duration = updates.duration;
+      }
+      if (updates.location !== undefined) {
+        dbUpdates.location = updates.location;
+      }
+      if (updates.site !== undefined) {
+        dbUpdates.site = updates.site;
+      }
+      if (updates.notes !== undefined) {
+        dbUpdates.notes = updates.notes;
+      }
+      if (updates.tags !== undefined) {
+        dbUpdates.tags = updates.tags;
+      }
+
+      const { data: updated, error } = await supabase
+        .from('sessions')
+        .update(dbUpdates as any)
+        .eq('id', id)
+        .eq('user_id', user.value!.sub)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      sessions.value[index] = dbSessionToSession(updated as DbSession);
+      return true;
+    }
   }
 
-  function deleteSession(id: string): boolean {
+  async function deleteSession(id: string): Promise<boolean> {
     const index = sessions.value.findIndex(s => s.id === id);
     if (index === -1) {
       return false;
     }
 
-    sessions.value.splice(index, 1);
-    saveToStorage();
-    return true;
+    if (isDemoMode.value) {
+      // Demo mode: delete from localStorage
+      sessions.value.splice(index, 1);
+      saveToStorage();
+      return true;
+    }
+    else {
+      // Database mode: delete from Supabase
+      if (!user.value) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.value!.sub);
+
+      if (error) {
+        throw error;
+      }
+
+      sessions.value.splice(index, 1);
+      return true;
+    }
   }
 
-  function deleteSessions(ids: string[]): number {
+  async function deleteSessions(ids: string[]): Promise<number> {
     const initialLength = sessions.value.length;
-    sessions.value = sessions.value.filter(s => !ids.includes(s.id));
-    saveToStorage();
+
+    if (isDemoMode.value) {
+      sessions.value = sessions.value.filter(s => !ids.includes(s.id));
+      saveToStorage();
+    }
+    else {
+      if (!user.value) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase
+        .from('sessions')
+        .delete()
+        .in('id', ids)
+        .eq('user_id', user.value!.sub);
+
+      if (error) {
+        throw error;
+      }
+
+      sessions.value = sessions.value.filter(s => !ids.includes(s.id));
+    }
+
     return initialLength - sessions.value.length;
   }
 
@@ -235,22 +432,70 @@ export const useSessionsStore = defineStore('sessions', () => {
     filters.value = { ...DEFAULT_SESSION_FILTERS };
   }
 
-  function importSessions(importedSessions: CashSession[], replace: boolean = false) {
-    if (replace) {
-      sessions.value = importedSessions;
+  async function importSessions(importedSessions: CashSession[], replace: boolean = false) {
+    if (isDemoMode.value) {
+      if (replace) {
+        sessions.value = importedSessions;
+      }
+      else {
+        const existingIds = new Set(sessions.value.map(s => s.id));
+        const newSessions = importedSessions.filter(s => !existingIds.has(s.id));
+        sessions.value.push(...newSessions);
+      }
+      saveToStorage();
     }
     else {
-      // Merge: add sessions that don't exist
-      const existingIds = new Set(sessions.value.map(s => s.id));
-      const newSessions = importedSessions.filter(s => !existingIds.has(s.id));
-      sessions.value.push(...newSessions);
+      // For database mode, insert each session
+      if (!user.value) {
+        throw new Error('User not authenticated');
+      }
+
+      if (replace) {
+        // Delete all existing sessions first
+        await supabase
+          .from('sessions')
+          .delete()
+          .eq('user_id', user.value!.sub);
+        sessions.value = [];
+      }
+
+      // Insert new sessions
+      for (const session of importedSessions) {
+        const dbSession = sessionToDbSession(session, user.value!.sub);
+        const { data, error } = await supabase
+          .from('sessions')
+          .insert(dbSession as any)
+          .select()
+          .single();
+
+        if (!error && data) {
+          sessions.value.push(dbSessionToSession(data as DbSession));
+        }
+      }
     }
-    saveToStorage();
   }
 
-  function clearAll() {
-    sessions.value = [];
-    saveToStorage();
+  async function clearAll() {
+    if (isDemoMode.value) {
+      sessions.value = [];
+      saveToStorage();
+    }
+    else {
+      if (!user.value) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('user_id', user.value!.sub);
+
+      if (error) {
+        throw error;
+      }
+
+      sessions.value = [];
+    }
   }
 
   return {
@@ -269,6 +514,7 @@ export const useSessionsStore = defineStore('sessions', () => {
 
     // Actions
     initialize,
+    reload,
     addSession,
     updateSession,
     deleteSession,

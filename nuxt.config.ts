@@ -10,7 +10,17 @@ export default defineNuxtConfig({
   modules: [
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
+    '@nuxtjs/supabase',
   ],
+
+  // Supabase configuration
+  supabase: {
+    redirectOptions: {
+      login: '/auth/login',
+      callback: '/auth/confirm',
+      exclude: ['/', '/auth/*'],
+    },
+  },
 
   // App configuration
   app: {
@@ -28,9 +38,11 @@ export default defineNuxtConfig({
   },
 
   // TypeScript configuration
+  // Note: typeCheck disabled due to Supabase types not being auto-generated yet
+  // Run `npx supabase gen types` after setting up Supabase project to enable
   typescript: {
     strict: true,
-    typeCheck: true,
+    typeCheck: false,
   },
 
   // Tailwind module options

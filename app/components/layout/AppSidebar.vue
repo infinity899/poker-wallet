@@ -39,8 +39,47 @@
       </NuxtLink>
     </nav>
 
-    <!-- Settings -->
-    <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+    <!-- User & Settings -->
+    <div class="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+      <!-- User info / Auth buttons -->
+      <div v-if="authStore.isAuthenticated" class="px-4 py-2">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center">
+            <span class="text-white text-sm font-medium">
+              {{ userInitial }}
+            </span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+              {{ userEmail }}
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              {{ authStore.isDemoMode ? 'Demo Mode' : 'Connected' }}
+            </p>
+          </div>
+          <button
+            class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            title="Sign out"
+            @click="authStore.signOut()"
+          >
+            <ArrowRightOnRectangleIcon class="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+      <div v-else class="space-y-1">
+        <NuxtLink
+          to="/auth/login"
+          class="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        >
+          <ArrowRightOnRectangleIcon class="w-5 h-5 text-gray-400" />
+          <span>Sign in</span>
+        </NuxtLink>
+        <p class="px-4 text-xs text-gray-500 dark:text-gray-400">
+          Demo mode active
+        </p>
+      </div>
+
+      <!-- Settings link -->
       <NuxtLink
         to="/settings"
         class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
@@ -62,6 +101,7 @@
 
 <script setup lang="ts">
 import {
+  ArrowRightOnRectangleIcon,
   BanknotesIcon,
   ChartBarIcon,
   Cog6ToothIcon,
@@ -71,6 +111,7 @@ import {
 } from '@heroicons/vue/24/outline';
 
 const route = useRoute();
+const authStore = useAuthStore();
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: HomeIcon },
@@ -79,6 +120,12 @@ const navItems = [
   { path: '/horses', label: 'My Horses', icon: UserGroupIcon },
   { path: '/analytics', label: 'Analytics', icon: ChartBarIcon },
 ];
+
+const userEmail = computed(() => authStore.currentUser?.email || '');
+const userInitial = computed(() => {
+  const email = userEmail.value;
+  return email ? email.charAt(0).toUpperCase() : '?';
+});
 
 function isActive(path: string) {
   if (path === '/') {

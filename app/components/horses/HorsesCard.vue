@@ -55,7 +55,9 @@
 
     <div class="grid grid-cols-2 gap-4 mb-4">
       <div>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Profit</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+          Total Profit
+        </p>
         <p
           class="text-xl font-bold"
           :class="stats.totalProfit >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
@@ -64,7 +66,9 @@
         </p>
       </div>
       <div>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Win Rate</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+          Win Rate
+        </p>
         <p class="text-xl font-bold text-gray-900 dark:text-gray-100">
           {{ stats.winRate.toFixed(1) }}%
         </p>
@@ -73,13 +77,17 @@
 
     <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
       <div>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Best</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          Best
+        </p>
         <p class="font-medium text-success-600 dark:text-success-400">
           {{ formatCurrency(stats.bestResult) }}
         </p>
       </div>
       <div>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Worst</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          Worst
+        </p>
         <p class="font-medium text-danger-600 dark:text-danger-400">
           {{ formatCurrency(stats.worstResult) }}
         </p>

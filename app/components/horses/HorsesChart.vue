@@ -36,6 +36,10 @@ import { Line } from 'vue-chartjs';
 import { HORSE_COLORS } from '~/types/horse';
 import { formatCurrency } from '~/utils/formatters';
 
+const props = defineProps<{
+  horses: readonly Horse[];
+}>();
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -46,10 +50,6 @@ ChartJS.register(
   Legend,
   Filler,
 );
-
-const props = defineProps<{
-  horses: readonly Horse[];
-}>();
 
 const horsesStore = useHorsesStore();
 

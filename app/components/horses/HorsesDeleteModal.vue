@@ -43,7 +43,9 @@ const emit = defineEmits<{
 const horsesStore = useHorsesStore();
 
 const transactionCount = computed(() => {
-  if (!props.horse) return 0;
+  if (!props.horse) {
+    return 0;
+  }
   return horsesStore.getHorseStats(props.horse.id).totalTransactions;
 });
 </script>
