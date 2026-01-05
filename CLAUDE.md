@@ -65,17 +65,17 @@ Nuxt 4 auto-imports components. The naming convention is based on path:
 ```typescript
 interface CashSession {
   id: string;
-  date: string;              // YYYY-MM-DD
+  date: string; // YYYY-MM-DD
   type: 'live' | 'online';
   currency: 'USD' | 'EUR' | 'GBP' | 'CAD' | 'RON';
-  stake: string;             // "1/2", "2/5"
+  stake: string; // "1/2", "2/5"
   smallBlind: number;
   bigBlind: number;
   game: 'NLH' | 'PLO' | 'PLO5' | 'Mixed';
-  result: number;            // profit/loss (signed)
-  duration: number;          // minutes
-  location?: string;         // live venue
-  site?: string;             // online site
+  result: number; // profit/loss (signed)
+  duration: number; // minutes
+  location?: string; // live venue
+  site?: string; // online site
   tags: string[];
   createdAt: string;
   updatedAt: string;
@@ -90,9 +90,9 @@ interface Tournament {
   type: 'live' | 'online';
   currency: Currency;
   buyIn: number;
-  fee: number;               // rake separate from buy-in
-  entries: number;           // 0 = single, 1+ = re-entries
-  winnings: number;          // prize won (0 if busted)
+  fee: number; // rake separate from buy-in
+  entries: number; // 0 = single, 1+ = re-entries
+  winnings: number; // prize won (0 if busted)
   name: string;
   venue?: string;
   site?: string;
@@ -173,20 +173,3 @@ Run with: `npm run test`
 - 2-space indentation
 - Explicit function return types in utils
 - Use `computed()` for derived state in components
-
-## Session Progress Summary
-
-### Completed in this session:
-1. Fixed component resolution errors (wrong naming: `DashboardDashboard` → `Dashboard`)
-2. Added store initialization plugin (`stores.client.ts`)
-3. Added cumulative profit chart to dashboard with 3 lines:
-   - Cash Sessions (blue solid line)
-   - Tournaments (purple dashed line)
-   - Combined (green filled line)
-4. Styled chart with proper tooltips, hover effects, and legend
-5. All tests passing (79 tests)
-6. Linting clean
-
-### PR Ready:
-- Branch: `feature/dashboard-profit-chart`
-- Files changed: `Dashboard.vue`, `DashboardProfitChart.vue` (new)
