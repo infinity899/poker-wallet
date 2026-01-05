@@ -1,5 +1,8 @@
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <!-- Announcement Banner -->
+    <LayoutAppAnnouncement class="sticky top-0 z-50" />
+
     <!-- Desktop Sidebar -->
     <LayoutAppSidebar
       v-if="isDesktop"
@@ -30,16 +33,21 @@
     />
 
     <!-- Floating Action Button -->
-    <LayoutAppFAB @click="handleFabClick" />
+    <LayoutAppFAB />
   </div>
 </template>
 
 <script setup lang="ts">
 const { isMobile, isDesktop } = useBreakpoint();
+const { addAnnouncement } = useAnnouncements();
 
-const showAddModal = ref(false);
-
-function handleFabClick() {
-  showAddModal.value = true;
-}
+// Add default alpha announcement
+onMounted(() => {
+  addAnnouncement({
+    id: 'alpha-notice',
+    type: 'info',
+    message: 'Alpha version with simulated data. You can add your own sessions on top of it.',
+    dismissible: true,
+  });
+});
 </script>

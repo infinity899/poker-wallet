@@ -26,6 +26,10 @@
         <span class="text-gray-600 dark:text-gray-400">Tournaments</span>
       </div>
       <div class="flex items-center gap-2">
+        <span class="w-4 h-1 rounded-full bg-orange-400" />
+        <span class="text-gray-600 dark:text-gray-400">My Horses</span>
+      </div>
+      <div class="flex items-center gap-2">
         <span class="w-4 h-1 rounded-full bg-emerald-500" />
         <span class="text-gray-600 dark:text-gray-400">Combined</span>
       </div>

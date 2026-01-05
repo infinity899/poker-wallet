@@ -1,5 +1,5 @@
 <template>
-  <nav class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 h-16 grid grid-cols-4 pb-safe">
+  <nav class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 h-16 grid grid-cols-5 pb-safe">
     <NuxtLink
       v-for="item in navItems"
       :key="item.path"
@@ -22,12 +22,14 @@ import {
   ChartBarIcon,
   HomeIcon,
   TrophyIcon,
+  UserGroupIcon,
 } from '@heroicons/vue/24/outline';
 import {
   BanknotesIcon as BanknotesIconSolid,
   ChartBarIcon as ChartBarIconSolid,
   HomeIcon as HomeIconSolid,
   TrophyIcon as TrophyIconSolid,
+  UserGroupIcon as UserGroupIconSolid,
 } from '@heroicons/vue/24/solid';
 
 const route = useRoute();
@@ -50,6 +52,12 @@ const navItems = [
     label: 'MTTs',
     icon: TrophyIcon,
     iconActive: TrophyIconSolid,
+  },
+  {
+    path: '/horses',
+    label: 'Horses',
+    icon: UserGroupIcon,
+    iconActive: UserGroupIconSolid,
   },
   {
     path: '/analytics',

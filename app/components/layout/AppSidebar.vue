@@ -67,6 +67,7 @@ import {
   Cog6ToothIcon,
   HomeIcon,
   TrophyIcon,
+  UserGroupIcon,
 } from '@heroicons/vue/24/outline';
 
 const route = useRoute();
@@ -75,6 +76,7 @@ const navItems = [
   { path: '/', label: 'Dashboard', icon: HomeIcon },
   { path: '/sessions', label: 'Cash Sessions', icon: BanknotesIcon },
   { path: '/tournaments', label: 'Tournaments', icon: TrophyIcon },
+  { path: '/horses', label: 'My Horses', icon: UserGroupIcon },
   { path: '/analytics', label: 'Analytics', icon: ChartBarIcon },
 ];
 

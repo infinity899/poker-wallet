@@ -26,6 +26,13 @@
       </button>
       <button
         class="px-3 py-1.5 text-sm font-medium rounded-full transition-colors"
+        :class="showHorses ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'"
+        @click="emit('update:showHorses', !showHorses)"
+      >
+        Horses
+      </button>
+      <button
+        class="px-3 py-1.5 text-sm font-medium rounded-full transition-colors"
         :class="showLive ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'"
         @click="emit('update:showLive', !showLive)"
       >
@@ -46,6 +53,7 @@
 defineProps<{
   showCash: boolean;
   showTournaments: boolean;
+  showHorses: boolean;
   showLive: boolean;
   showOnline: boolean;
 }>();
@@ -53,6 +61,7 @@ defineProps<{
 const emit = defineEmits<{
   'update:showCash': [value: boolean];
   'update:showTournaments': [value: boolean];
+  'update:showHorses': [value: boolean];
   'update:showLive': [value: boolean];
   'update:showOnline': [value: boolean];
 }>();
