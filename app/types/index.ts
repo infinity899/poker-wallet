@@ -1,3 +1,4 @@
+export * from './database.types';
 export * from './filters';
 export * from './horse';
 export * from './reference';

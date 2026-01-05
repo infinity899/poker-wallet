@@ -48,8 +48,10 @@
 import type { Currency, SessionType } from '~/types';
 
 const { isMobile, isDesktop } = useBreakpoint();
-const { addAnnouncement } = useAnnouncements();
+const { addAnnouncement, removeAnnouncement } = useAnnouncements();
+const authStore = useAuthStore();
 const tournamentsStore = useTournamentsStore();
+const router = useRouter();
 
 const showTournamentSessionModal = ref(false);
 
@@ -79,13 +81,43 @@ function handleSaveTournamentSession(data: {
   showTournamentSessionModal.value = false;
 }
 
-// Add default alpha announcement
-onMounted(() => {
-  addAnnouncement({
-    id: 'alpha-notice',
-    type: 'info',
-    message: 'Alpha version with simulated data. You can add your own sessions on top of it.',
-    dismissible: true,
-  });
-});
+const sessionsStore = useSessionsStore();
+const horsesStore = useHorsesStore();
+
+async function switchToRealData() {
+  await authStore.setDemoMode(false);
+  await Promise.all([
+    sessionsStore.reload(),
+    tournamentsStore.reload(),
+    horsesStore.reload(),
+  ]);
+}
+
+// Show demo mode announcement when in demo mode
+watch(
+  () => authStore.isDemoMode,
+  (isDemoMode) => {
+    if (isDemoMode) {
+      addAnnouncement({
+        id: 'demo-mode-notice',
+        type: 'info',
+        message: 'You\'re viewing demo data.',
+        dismissible: true,
+        action: authStore.isAuthenticated
+          ? {
+              label: 'Switch to real data →',
+              handler: switchToRealData,
+            }
+          : {
+              label: 'Sign in to track your results →',
+              handler: () => router.push('/auth/login'),
+            },
+      });
+    }
+    else {
+      removeAnnouncement('demo-mode-notice');
+    }
+  },
+  { immediate: true },
+);
 </script>

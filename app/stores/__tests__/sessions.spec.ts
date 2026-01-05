@@ -90,7 +90,7 @@ describe('useSessionsStore', () => {
       const store = useSessionsStore();
       await store.initialize();
 
-      const newSession = store.addSession({
+      const newSession = await store.addSession({
         date: '2024-01-15',
         type: 'live',
         game: 'NLH',
@@ -113,7 +113,7 @@ describe('useSessionsStore', () => {
       const store = useSessionsStore();
       await store.initialize();
 
-      store.addSession({
+      await store.addSession({
         date: '2024-01-15',
         type: 'live',
         game: 'NLH',
@@ -126,7 +126,7 @@ describe('useSessionsStore', () => {
         tags: [],
       });
 
-      const updated = store.updateSession('test-uuid-123', { result: 300 });
+      const updated = await store.updateSession('test-uuid-123', { result: 300 });
 
       expect(updated).toBe(true);
       expect(store.sessions[0]?.result).toBe(300);
@@ -136,7 +136,7 @@ describe('useSessionsStore', () => {
       const store = useSessionsStore();
       await store.initialize();
 
-      const updated = store.updateSession('non-existent', { result: 300 });
+      const updated = await store.updateSession('non-existent', { result: 300 });
 
       expect(updated).toBe(false);
     });
@@ -145,7 +145,7 @@ describe('useSessionsStore', () => {
       const store = useSessionsStore();
       await store.initialize();
 
-      store.addSession({
+      await store.addSession({
         date: '2024-01-15',
         type: 'live',
         game: 'NLH',
@@ -158,7 +158,7 @@ describe('useSessionsStore', () => {
         tags: [],
       });
 
-      const deleted = store.deleteSession('test-uuid-123');
+      const deleted = await store.deleteSession('test-uuid-123');
 
       expect(deleted).toBe(true);
       expect(store.sessions).toHaveLength(0);
@@ -174,7 +174,7 @@ describe('useSessionsStore', () => {
         .mockReturnValueOnce('uuid-2')
         .mockReturnValueOnce('uuid-3');
 
-      store.addSession({
+      await store.addSession({
         date: '2024-01-15',
         type: 'live',
         game: 'NLH',
@@ -186,7 +186,7 @@ describe('useSessionsStore', () => {
         duration: 120,
         tags: [],
       });
-      store.addSession({
+      await store.addSession({
         date: '2024-01-16',
         type: 'live',
         game: 'NLH',
@@ -198,7 +198,7 @@ describe('useSessionsStore', () => {
         duration: 120,
         tags: [],
       });
-      store.addSession({
+      await store.addSession({
         date: '2024-01-17',
         type: 'live',
         game: 'NLH',
@@ -211,7 +211,7 @@ describe('useSessionsStore', () => {
         tags: [],
       });
 
-      const deletedCount = store.deleteSessions(['uuid-1', 'uuid-3']);
+      const deletedCount = await store.deleteSessions(['uuid-1', 'uuid-3']);
 
       expect(deletedCount).toBe(2);
       expect(store.sessions).toHaveLength(1);
@@ -222,7 +222,7 @@ describe('useSessionsStore', () => {
       const store = useSessionsStore();
       await store.initialize();
 
-      store.addSession({
+      await store.addSession({
         date: '2024-01-15',
         type: 'live',
         game: 'NLH',
@@ -252,7 +252,7 @@ describe('useSessionsStore', () => {
         .mockReturnValueOnce('uuid-1')
         .mockReturnValueOnce('uuid-2');
 
-      store.addSession({
+      await store.addSession({
         date: '2024-01-15',
         type: 'live',
         game: 'NLH',
@@ -264,7 +264,7 @@ describe('useSessionsStore', () => {
         duration: 120,
         tags: [],
       });
-      store.addSession({
+      await store.addSession({
         date: '2024-01-16',
         type: 'online',
         game: 'NLH',
@@ -302,7 +302,7 @@ describe('useSessionsStore', () => {
         .mockReturnValueOnce('uuid-1')
         .mockReturnValueOnce('uuid-2');
 
-      store.addSession({
+      await store.addSession({
         date: '2024-01-15',
         type: 'live',
         game: 'NLH',
@@ -314,7 +314,7 @@ describe('useSessionsStore', () => {
         duration: 60,
         tags: [],
       });
-      store.addSession({
+      await store.addSession({
         date: '2024-01-16',
         type: 'live',
         game: 'NLH',
@@ -338,7 +338,7 @@ describe('useSessionsStore', () => {
       const store = useSessionsStore();
       await store.initialize();
 
-      store.addSession({
+      await store.addSession({
         date: '2024-01-15',
         type: 'live',
         game: 'NLH',
@@ -369,7 +369,7 @@ describe('useSessionsStore', () => {
         },
       ];
 
-      store.importSessions(importedSessions, true);
+      await store.importSessions(importedSessions, true);
 
       expect(store.sessions).toHaveLength(1);
       expect(store.sessions[0]?.id).toBe('imported-1');
@@ -379,7 +379,7 @@ describe('useSessionsStore', () => {
       const store = useSessionsStore();
       await store.initialize();
 
-      store.addSession({
+      await store.addSession({
         date: '2024-01-15',
         type: 'live',
         game: 'NLH',
@@ -410,7 +410,7 @@ describe('useSessionsStore', () => {
         },
       ];
 
-      store.importSessions(importedSessions, false);
+      await store.importSessions(importedSessions, false);
 
       expect(store.sessions).toHaveLength(2);
     });
@@ -419,7 +419,7 @@ describe('useSessionsStore', () => {
       const store = useSessionsStore();
       await store.initialize();
 
-      store.addSession({
+      await store.addSession({
         date: '2024-01-15',
         type: 'live',
         game: 'NLH',
@@ -432,7 +432,7 @@ describe('useSessionsStore', () => {
         tags: [],
       });
 
-      store.clearAll();
+      await store.clearAll();
 
       expect(store.sessions).toHaveLength(0);
     });
