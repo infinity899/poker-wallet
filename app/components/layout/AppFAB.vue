@@ -53,12 +53,7 @@ const menuItems = [
 ];
 
 function handleFabClick() {
-  if (isMobile.value) {
-    showMenu.value = !showMenu.value;
-  }
-  else {
-    emit('click');
-  }
+  showMenu.value = !showMenu.value;
 }
 
 function handleMenuItemClick(path: string) {

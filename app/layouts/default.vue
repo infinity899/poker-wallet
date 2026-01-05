@@ -30,16 +30,10 @@
     />
 
     <!-- Floating Action Button -->
-    <LayoutAppFAB @click="handleFabClick" />
+    <LayoutAppFAB />
   </div>
 </template>
 
 <script setup lang="ts">
 const { isMobile, isDesktop } = useBreakpoint();
-
-const showAddModal = ref(false);
-
-function handleFabClick() {
-  showAddModal.value = true;
-}
 </script>
