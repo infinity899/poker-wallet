@@ -87,7 +87,10 @@ const filteredTournaments = computed(() => {
 });
 
 const totalProfit = computed(() => {
-  const sessionProfit = filteredSessions.value.reduce((sum, s) => sum + s.result, 0);
+  const sessionProfit = filteredSessions.value.reduce(
+    (sum, s) => sum + s.result,
+    0,
+  );
   const tournamentProfit = filteredTournaments.value.reduce((sum, t) => {
     const cost = (t.buyIn + t.fee) * (t.entries + 1);
     return sum + (t.winnings - cost);
@@ -107,7 +110,10 @@ const hourlyRate = computed(() => {
   if (totalHours.value === 0) {
     return 0;
   }
-  const sessionProfit = filteredSessions.value.reduce((sum, s) => sum + s.result, 0);
+  const sessionProfit = filteredSessions.value.reduce(
+    (sum, s) => sum + s.result,
+    0,
+  );
   return sessionProfit / totalHours.value;
 });
 
@@ -120,26 +126,30 @@ const winRate = computed(() => {
 });
 
 const recentSessions = computed(() => sessionsStore.sortedSessions.slice(0, 5));
-const recentTournaments = computed(() => tournamentsStore.sortedTournaments.slice(0, 5));
+const recentTournaments = computed(() =>
+  tournamentsStore.sortedTournaments.slice(0, 5),
+);
 
 // Combined chart data with 3 lines: Cash, Tournaments, Combined
 const combinedChartData = computed(() => {
   // Get all cash session data points
-  const cashData: { date: string; profit: number; type: 'cash' }[] = filteredSessions.value.map(s => ({
-    date: s.date,
-    profit: s.result,
-    type: 'cash' as const,
-  }));
+  const cashData: { date: string; profit: number; type: 'cash' }[]
+    = filteredSessions.value.map(s => ({
+      date: s.date,
+      profit: s.result,
+      type: 'cash' as const,
+    }));
 
   // Get all tournament data points
-  const tournamentData: { date: string; profit: number; type: 'tournament' }[] = filteredTournaments.value.map((t) => {
-    const cost = (t.buyIn + t.fee) * (t.entries + 1);
-    return {
-      date: t.date,
-      profit: t.winnings - cost,
-      type: 'tournament' as const,
-    };
-  });
+  const tournamentData: { date: string; profit: number; type: 'tournament' }[]
+    = filteredTournaments.value.map((t) => {
+      const cost = (t.buyIn + t.fee) * (t.entries + 1);
+      return {
+        date: t.date,
+        profit: t.winnings - cost,
+        type: 'tournament' as const,
+      };
+    });
 
   // Combine and sort all data by date
   const allData = [...cashData, ...tournamentData].sort(
