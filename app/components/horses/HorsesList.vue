@@ -19,6 +19,7 @@
         @edit="openEditModal"
         @delete="openDeleteModal"
         @log="openLogModal"
+        @log-session="openSessionModal"
       />
     </div>
 
@@ -51,6 +52,12 @@
       @save="handleLogResult"
     />
 
+    <HorsesLogSessionModal
+      :horse="sessionHorse"
+      @close="closeSessionModal"
+      @save="handleLogSession"
+    />
+
     <HorsesDeleteModal
       :horse="deletingHorse"
       @confirm="handleDelete"
@@ -69,6 +76,7 @@ const horsesStore = useHorsesStore();
 const showFormModal = ref(false);
 const editingHorse = ref<Horse | null>(null);
 const loggingHorse = ref<Horse | null>(null);
+const sessionHorse = ref<Horse | null>(null);
 const deletingHorse = ref<Horse | null>(null);
 
 // Form modal handlers
@@ -109,6 +117,28 @@ function closeLogModal() {
 function handleLogResult(data: { horseId: string; date: string; type: HorseTransactionType; result: number; description?: string }) {
   horsesStore.addTransaction(data);
   closeLogModal();
+}
+
+// Session modal handlers
+function openSessionModal(horse: Horse) {
+  sessionHorse.value = horse;
+}
+
+function closeSessionModal() {
+  sessionHorse.value = null;
+}
+
+function handleLogSession(data: {
+  horseId: string;
+  date: string;
+  type: HorseTransactionType;
+  result: number;
+  description?: string;
+  isSession: boolean;
+  sessionCount: number;
+}) {
+  horsesStore.addTransaction(data);
+  closeSessionModal();
 }
 
 // Delete modal handlers

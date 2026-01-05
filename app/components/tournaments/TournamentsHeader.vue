@@ -8,14 +8,23 @@
         {{ count }} tournaments
       </p>
     </div>
-    <NuxtLink to="/tournaments/new" class="btn-primary">
-      Add Tournament
-    </NuxtLink>
+    <div class="flex gap-2">
+      <button class="btn-secondary" @click="emit('logSession')">
+        Log Session
+      </button>
+      <NuxtLink to="/tournaments/new" class="btn-primary">
+        Add Tournament
+      </NuxtLink>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 defineProps<{
   count: number;
+}>();
+
+const emit = defineEmits<{
+  logSession: [];
 }>();
 </script>

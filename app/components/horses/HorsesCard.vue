@@ -86,12 +86,20 @@
       </div>
     </div>
 
-    <button
-      class="w-full btn-primary"
-      @click="emit('log', horse)"
-    >
-      Log Result
-    </button>
+    <div class="flex gap-2">
+      <button
+        class="flex-1 btn-secondary"
+        @click="emit('logSession', horse)"
+      >
+        Log Session
+      </button>
+      <button
+        class="flex-1 btn-primary"
+        @click="emit('log', horse)"
+      >
+        Log Result
+      </button>
+    </div>
   </div>
 </template>
 
@@ -111,6 +119,7 @@ const emit = defineEmits<{
   edit: [horse: Horse];
   delete: [horse: Horse];
   log: [horse: Horse];
+  logSession: [horse: Horse];
 }>();
 
 const horsesStore = useHorsesStore();
