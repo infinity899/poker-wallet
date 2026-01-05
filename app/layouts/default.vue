@@ -33,13 +33,51 @@
     />
 
     <!-- Floating Action Button -->
-    <LayoutAppFAB />
+    <LayoutAppFAB @action="handleFabAction" />
+
+    <!-- Global Tournament Session Modal -->
+    <TournamentsLogSessionModal
+      :is-open="showTournamentSessionModal"
+      @close="showTournamentSessionModal = false"
+      @save="handleSaveTournamentSession"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import type { Currency, SessionType } from '~/types';
+
 const { isMobile, isDesktop } = useBreakpoint();
 const { addAnnouncement } = useAnnouncements();
+const tournamentsStore = useTournamentsStore();
+
+const showTournamentSessionModal = ref(false);
+
+function handleFabAction(action: string) {
+  if (action === 'logTournamentSession') {
+    showTournamentSessionModal.value = true;
+  }
+}
+
+function handleSaveTournamentSession(data: {
+  date: string;
+  type: SessionType;
+  currency: Currency;
+  name: string;
+  buyIn: number;
+  fee: number;
+  entries: number;
+  winnings: number;
+  venue?: string;
+  site?: string;
+  notes?: string;
+  tags: string[];
+  isSession: boolean;
+  sessionCount: number;
+}) {
+  tournamentsStore.addTournament(data);
+  showTournamentSessionModal.value = false;
+}
 
 // Add default alpha announcement
 onMounted(() => {

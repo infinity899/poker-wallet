@@ -19,6 +19,9 @@ export interface Tournament {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  // Session fields (for batch logging multiple tournaments)
+  isSession?: boolean;
+  sessionCount?: number; // number of tournaments in the session
 }
 
 export interface TournamentStats {

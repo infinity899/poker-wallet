@@ -20,6 +20,9 @@ export interface HorseTransaction {
   result: number; // profit/loss (signed)
   description?: string; // e.g., "WSOP Main Event", "2/5 NLH session"
   createdAt: string;
+  // Session fields (for batch logging multiple games)
+  isSession?: boolean;
+  sessionCount?: number; // number of games in the session
 }
 
 export interface HorseStats {

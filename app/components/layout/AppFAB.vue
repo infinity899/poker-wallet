@@ -12,9 +12,9 @@
       <div v-if="showMenu" class="absolute bottom-16 right-0 flex flex-col gap-3 items-end mb-2">
         <button
           v-for="item in menuItems"
-          :key="item.path"
+          :key="item.id"
           class="flex items-center gap-3 pr-4 pl-3 py-2 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl dark:shadow-gray-900/50 transition-shadow"
-          @click="handleMenuItemClick(item.path)"
+          @click="handleMenuItemClick(item)"
         >
           <div class="w-8 h-8 rounded-full flex items-center justify-center" :class="[item.color]">
             <PlusIcon class="w-4 h-4 text-white" />
@@ -38,8 +38,17 @@
 <script setup lang="ts">
 import { PlusIcon } from '@heroicons/vue/24/solid';
 
+interface MenuItem {
+  id: string;
+  label: string;
+  color: string;
+  path?: string;
+  action?: string;
+}
+
 const emit = defineEmits<{
   click: [];
+  action: [action: string];
 }>();
 
 const { isMobile } = useBreakpoint();
@@ -47,18 +56,24 @@ const { isMobile } = useBreakpoint();
 const showMenu = ref(false);
 const router = useRouter();
 
-const menuItems = [
-  { label: 'Cash Session', path: '/sessions/new', color: 'bg-success-500' },
-  { label: 'Tournament', path: '/tournaments/new', color: 'bg-primary-500' },
+const menuItems: MenuItem[] = [
+  { id: 'cash', label: 'Cash Session', path: '/sessions/new', color: 'bg-success-500' },
+  { id: 'tournament', label: 'Tournament', path: '/tournaments/new', color: 'bg-primary-500' },
+  { id: 'tournament-session', label: 'Tournament Session', action: 'logTournamentSession', color: 'bg-purple-500' },
 ];
 
 function handleFabClick() {
   showMenu.value = !showMenu.value;
 }
 
-function handleMenuItemClick(path: string) {
+function handleMenuItemClick(item: MenuItem) {
   showMenu.value = false;
-  router.push(path);
+  if (item.path) {
+    router.push(item.path);
+  }
+  else if (item.action) {
+    emit('action', item.action);
+  }
 }
 
 // Close menu when clicking outside
