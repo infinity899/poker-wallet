@@ -101,6 +101,34 @@
           </div>
         </div>
 
+        <!-- Cash In & Cash Out (optional) -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Cash In (optional)</label>
+            <input
+              v-model.number="form.cashIn"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="0"
+              class="input"
+              @input="calculateResult"
+            >
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Cash Out (optional)</label>
+            <input
+              v-model.number="form.cashOut"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="0"
+              class="input"
+              @input="calculateResult"
+            >
+          </div>
+        </div>
+
         <!-- Result & Duration -->
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -110,6 +138,7 @@
               type="number"
               step="1"
               class="input"
+              :class="{ 'bg-gray-50': hasCalculatedResult }"
             >
           </div>
           <div>
@@ -185,6 +214,8 @@ const form = reactive({
   game: 'NLH' as GameType,
   currency: 'USD' as Currency,
   stake: '',
+  cashIn: null as number | null,
+  cashOut: null as number | null,
   result: 0,
   duration: 120,
   location: '',
@@ -194,6 +225,16 @@ const form = reactive({
 });
 
 const errors = reactive<Record<string, string>>({});
+
+const hasCalculatedResult = computed(() => {
+  return form.cashIn !== null && form.cashOut !== null && form.cashIn > 0;
+});
+
+function calculateResult() {
+  if (form.cashIn !== null && form.cashOut !== null && form.cashIn > 0) {
+    form.result = form.cashOut - form.cashIn;
+  }
+}
 
 function validate() {
   errors.stake = '';
@@ -228,6 +269,8 @@ function handleSubmit() {
     duration: form.duration,
     location: form.type === 'live' ? form.location : undefined,
     site: form.type === 'online' ? form.site : undefined,
+    buyInTotal: form.cashIn || undefined,
+    cashOutTotal: form.cashOut || undefined,
     notes: form.notes || undefined,
     tags: form.tags,
   });
