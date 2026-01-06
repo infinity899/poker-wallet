@@ -16,7 +16,7 @@ export function calculateDurationFromTimes(startTime: string, endTime: string, _
     return 0;
   }
 
-  let startTotalMinutes = startHours * 60 + startMinutes;
+  const startTotalMinutes = startHours * 60 + startMinutes;
   let endTotalMinutes = endHours * 60 + endMinutes;
 
   // Handle sessions spanning midnight

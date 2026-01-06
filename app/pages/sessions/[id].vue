@@ -34,21 +34,19 @@
           </div>
           <div>
             <label class="label">Start Time</label>
-            <input
+            <UiTimeInput
               v-model="form.startTime"
-              type="time"
-              class="input font-mono"
-              @input="calculateDuration"
-            >
+              placeholder="Start time"
+              @change="calculateDuration"
+            />
           </div>
           <div>
             <label class="label">End Time</label>
-            <input
+            <UiTimeInput
               v-model="form.endTime"
-              type="time"
-              class="input font-mono"
-              @input="calculateDuration"
-            >
+              placeholder="End time"
+              @change="calculateDuration"
+            />
           </div>
           <div>
             <label class="label">Type</label>
@@ -259,8 +257,8 @@
 
 <script setup lang="ts">
 import type { Currency, GameType, SessionStatus, SessionType } from '~/types';
-import { calculateDurationFromTimes } from '~/utils/calculations';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
+import { calculateDurationFromTimes } from '~/utils/calculations';
 
 const sessionsStore = useSessionsStore();
 const referenceStore = useReferenceStore();

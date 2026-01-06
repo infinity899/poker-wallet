@@ -27,11 +27,10 @@
           </div>
           <div>
             <label class="label">Start Time</label>
-            <input
+            <UiTimeInput
               v-model="form.startTime"
-              type="time"
-              class="input font-mono"
-            >
+              placeholder="Start time"
+            />
           </div>
           <div>
             <label class="label">Type</label>
