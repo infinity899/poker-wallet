@@ -1,32 +1,45 @@
 <template>
   <div class="card overflow-hidden">
-    <div class="table-container">
-      <table class="table">
-        <thead>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-border dark:divide-border-dark">
+        <thead class="bg-surface-secondary dark:bg-surface-dark-tertiary">
           <tr>
-            <th>Date</th>
-            <th>Type</th>
-            <th>Game</th>
-            <th>Stakes</th>
-            <th>Venue/Site</th>
-            <th>Duration</th>
-            <th class="text-right">
+            <th class="px-4 py-3 text-left text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider">
+              Date
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider">
+              Type
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider">
+              Game
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider">
+              Stakes
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider">
+              Venue/Site
+            </th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider">
+              Duration
+            </th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider">
               Result
             </th>
-            <th class="text-right">
+            <th class="px-4 py-3 text-right text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider">
               Actions
             </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="bg-surface dark:bg-surface-dark-secondary divide-y divide-border-subtle dark:divide-border-dark-subtle">
           <tr
             v-for="session in sessions"
             :key="session.id"
+            class="hover:bg-surface-secondary dark:hover:bg-surface-dark-tertiary transition-colors"
           >
-            <td class="whitespace-nowrap text-foreground dark:text-foreground-dark">
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground dark:text-foreground-dark">
               {{ formatDate(session.date) }}
             </td>
-            <td class="whitespace-nowrap">
+            <td class="px-4 py-3 whitespace-nowrap text-sm">
               <span
                 class="badge"
                 :class="session.type === 'live'
@@ -36,34 +49,34 @@
                 {{ session.type }}
               </span>
             </td>
-            <td class="whitespace-nowrap text-foreground dark:text-foreground-dark">
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground dark:text-foreground-dark">
               {{ session.game }}
             </td>
-            <td class="whitespace-nowrap text-foreground dark:text-foreground-dark font-mono text-xs">
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground dark:text-foreground-dark font-mono">
               {{ session.stake }}
             </td>
-            <td class="whitespace-nowrap text-foreground-muted dark:text-foreground-dark-muted">
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground-muted dark:text-foreground-dark-muted">
               {{ session.type === 'live' ? session.location : session.site }}
             </td>
-            <td class="whitespace-nowrap text-foreground-muted dark:text-foreground-dark-muted">
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground-muted dark:text-foreground-dark-muted">
               {{ formatDuration(session.duration) }}
             </td>
             <td
-              class="whitespace-nowrap text-right font-semibold data-value"
+              class="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold data-value"
               :class="session.result >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
             >
               {{ formatProfit(session.result) }}
             </td>
-            <td class="whitespace-nowrap text-right">
-              <div class="flex gap-1 justify-end">
+            <td class="px-4 py-3 whitespace-nowrap text-right text-sm">
+              <div class="flex gap-2 justify-end">
                 <NuxtLink
                   :to="`/sessions/${session.id}`"
-                  class="p-1.5 hover:bg-surface-tertiary dark:hover:bg-surface-dark-tertiary rounded-md transition-colors"
+                  class="p-1 hover:bg-surface-tertiary dark:hover:bg-surface-dark-tertiary rounded transition-colors"
                 >
                   <PencilIcon class="w-4 h-4 text-foreground-muted dark:text-foreground-dark-muted" />
                 </NuxtLink>
                 <button
-                  class="p-1.5 hover:bg-danger-50 dark:hover:bg-danger-900/30 rounded-md transition-colors"
+                  class="p-1 hover:bg-danger-50 dark:hover:bg-danger-900/30 rounded transition-colors"
                   @click.prevent="emit('delete', session.id)"
                 >
                   <TrashIcon class="w-4 h-4 text-danger-500 dark:text-danger-400" />
