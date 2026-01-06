@@ -2,20 +2,23 @@
   <div class="p-4 lg:p-0 max-w-2xl mx-auto">
     <!-- Header -->
     <div class="flex items-center gap-4 mb-6">
-      <NuxtLink to="/sessions" class="p-2 hover:bg-gray-100 rounded-lg">
-        <ArrowLeftIcon class="w-5 h-5 text-gray-600" />
+      <NuxtLink
+        to="/sessions"
+        class="p-2 hover:bg-surface-tertiary dark:hover:bg-surface-dark-tertiary rounded-md transition-colors"
+      >
+        <ArrowLeftIcon class="w-5 h-5 text-foreground-muted dark:text-foreground-dark-muted" />
       </NuxtLink>
-      <h1 class="text-2xl font-bold text-gray-900">
+      <h1 class="text-xl font-semibold text-foreground dark:text-foreground-dark tracking-tight">
         Edit Session
       </h1>
     </div>
 
-    <form class="space-y-6" @submit.prevent="handleSubmit">
-      <div class="card p-6 space-y-4">
+    <form class="space-y-5" @submit.prevent="handleSubmit">
+      <div class="card p-5 space-y-4">
         <!-- Date & Type -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <label class="label">Date</label>
             <input
               v-model="form.date"
               type="date"
@@ -23,7 +26,7 @@
             >
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+            <label class="label">Type</label>
             <select v-model="form.type" class="input">
               <option value="live">
                 Live
@@ -38,7 +41,7 @@
         <!-- Game & Stakes -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Game</label>
+            <label class="label">Game</label>
             <select v-model="form.game" class="input">
               <option v-for="game in referenceStore.gameTypes" :key="game" :value="game">
                 {{ game }}
@@ -46,15 +49,15 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Stakes</label>
+            <label class="label">Stakes</label>
             <input
               v-model="form.stake"
               type="text"
               placeholder="1/2"
-              class="input"
+              class="input font-mono"
               :class="{ 'input-error': errors.stake }"
             >
-            <p v-if="errors.stake" class="mt-1 text-sm text-danger-600">
+            <p v-if="errors.stake" class="mt-1 text-xs text-danger-600 dark:text-danger-400">
               {{ errors.stake }}
             </p>
           </div>
@@ -63,7 +66,7 @@
         <!-- Currency & Venue/Site -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+            <label class="label">Currency</label>
             <select v-model="form.currency" class="input">
               <option v-for="currency in referenceStore.currencies" :key="currency" :value="currency">
                 {{ currency }}
@@ -71,7 +74,7 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
+            <label class="label">
               {{ form.type === 'live' ? 'Venue' : 'Site' }}
             </label>
             <select
@@ -104,26 +107,54 @@
         <!-- Cash In & Cash Out (optional) -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Cash In (optional)</label>
+            <label class="label">Cash In (optional)</label>
             <input
               v-model.number="form.cashIn"
               type="number"
               step="1"
               min="0"
               placeholder="0"
-              class="input"
+              class="input font-mono"
               @input="calculateResult"
             >
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Cash Out (optional)</label>
+            <label class="label">Cash Out (optional)</label>
             <input
               v-model.number="form.cashOut"
               type="number"
               step="1"
               min="0"
               placeholder="0"
-              class="input"
+              class="input font-mono"
+              @input="calculateResult"
+            >
+          </div>
+        </div>
+
+        <!-- Bankroll Initial & Final (optional) -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="label">Bankroll Initial (optional)</label>
+            <input
+              v-model.number="form.bankrollInitial"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="0"
+              class="input font-mono"
+              @input="calculateResult"
+            >
+          </div>
+          <div>
+            <label class="label">Bankroll Final (optional)</label>
+            <input
+              v-model.number="form.bankrollFinal"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="0"
+              class="input font-mono"
               @input="calculateResult"
             >
           </div>
@@ -132,25 +163,25 @@
         <!-- Result & Duration -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Result ($)</label>
+            <label class="label">Result ($)</label>
             <input
               v-model.number="form.result"
               type="number"
               step="1"
-              class="input"
-              :class="{ 'bg-gray-50': hasCalculatedResult }"
+              class="input font-mono"
+              :class="{ 'bg-surface-secondary dark:bg-surface-dark-tertiary': hasCalculatedResult }"
             >
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+            <label class="label">Duration (minutes)</label>
             <input
               v-model.number="form.duration"
               type="number"
               min="1"
-              class="input"
+              class="input font-mono"
               :class="{ 'input-error': errors.duration }"
             >
-            <p v-if="errors.duration" class="mt-1 text-sm text-danger-600">
+            <p v-if="errors.duration" class="mt-1 text-xs text-danger-600 dark:text-danger-400">
               {{ errors.duration }}
             </p>
           </div>
@@ -158,7 +189,7 @@
 
         <!-- Notes -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+          <label class="label">Notes</label>
           <textarea
             v-model="form.notes"
             rows="3"
@@ -169,16 +200,14 @@
 
         <!-- Tags -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Tags</label>
-          <div class="flex flex-wrap gap-2">
+          <label class="label">Tags</label>
+          <div class="flex flex-wrap gap-1.5">
             <button
               v-for="tag in referenceStore.tags"
               :key="tag.id"
               type="button"
-              class="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-              :class="form.tags.includes(tag.name)
-                ? 'bg-primary-100 text-primary-700 ring-2 ring-primary-500'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+              class="filter-chip"
+              :class="{ 'filter-chip-active': form.tags.includes(tag.name) }"
               @click="form.tags.includes(tag.name) ? form.tags = form.tags.filter(t => t !== tag.name) : form.tags.push(tag.name)"
             >
               {{ tag.name }}
@@ -188,7 +217,7 @@
       </div>
 
       <!-- Submit -->
-      <div class="flex gap-4">
+      <div class="flex gap-3">
         <NuxtLink to="/sessions" class="btn-secondary flex-1">
           Cancel
         </NuxtLink>
@@ -225,6 +254,8 @@ const form = reactive({
   stake: session.value?.stake || '',
   cashIn: session.value?.buyInTotal || null as number | null,
   cashOut: session.value?.cashOutTotal || null as number | null,
+  bankrollInitial: null as number | null,
+  bankrollFinal: null as number | null,
   result: session.value?.result || 0,
   duration: session.value?.duration || 120,
   location: session.value?.location || '',
@@ -236,11 +267,17 @@ const form = reactive({
 const errors = reactive<Record<string, string>>({});
 
 const hasCalculatedResult = computed(() => {
-  return form.cashIn !== null && form.cashOut !== null && form.cashIn > 0;
+  const hasBankroll = form.bankrollInitial !== null && form.bankrollFinal !== null && form.bankrollInitial > 0;
+  const hasCashInOut = form.cashIn !== null && form.cashOut !== null && form.cashIn > 0;
+  return hasBankroll || hasCashInOut;
 });
 
 function calculateResult() {
-  if (form.cashIn !== null && form.cashOut !== null && form.cashIn > 0) {
+  // Bankroll takes priority over cash in/out
+  if (form.bankrollInitial !== null && form.bankrollFinal !== null && form.bankrollInitial > 0) {
+    form.result = form.bankrollFinal - form.bankrollInitial;
+  }
+  else if (form.cashIn !== null && form.cashOut !== null && form.cashIn > 0) {
     form.result = form.cashOut - form.cashIn;
   }
 }

@@ -272,8 +272,8 @@
   }
 
   .table td {
-    @apply px-4 py-3 text-foreground border-b border-border-subtle;
-    @apply dark:text-foreground-dark dark:border-border-dark-subtle;
+    @apply px-4 py-3 border-b border-border-subtle;
+    @apply dark:border-border-dark-subtle;
   }
 
   .table tbody tr {

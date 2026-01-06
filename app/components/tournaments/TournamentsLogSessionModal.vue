@@ -134,7 +134,36 @@
                   type="number"
                   min="0"
                   class="input font-mono"
+                  :class="{ 'bg-surface-secondary dark:bg-surface-dark-tertiary': hasCalculatedWinnings }"
                   placeholder="e.g., 750"
+                >
+              </div>
+            </div>
+
+            <!-- Bankroll Initial & Final (optional) -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="label">Bankroll Initial (optional)</label>
+                <input
+                  v-model.number="form.bankrollInitial"
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="0"
+                  class="input font-mono"
+                  @input="calculateWinnings"
+                >
+              </div>
+              <div>
+                <label class="label">Bankroll Final (optional)</label>
+                <input
+                  v-model.number="form.bankrollFinal"
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="0"
+                  class="input font-mono"
+                  @input="calculateWinnings"
                 >
               </div>
             </div>
@@ -220,6 +249,8 @@ const form = reactive({
   buyIn: 0,
   fee: 0,
   winnings: 0,
+  bankrollInitial: null as number | null,
+  bankrollFinal: null as number | null,
   venue: '',
   site: '',
   notes: '',
@@ -234,6 +265,19 @@ const profit = computed(() => {
   return form.winnings - form.buyIn - form.fee;
 });
 
+const hasCalculatedWinnings = computed(() => {
+  return form.bankrollInitial !== null && form.bankrollFinal !== null && form.bankrollInitial > 0;
+});
+
+function calculateWinnings() {
+  if (form.bankrollInitial !== null && form.bankrollFinal !== null && form.bankrollInitial > 0) {
+    // Winnings = (bankrollFinal - bankrollInitial) + buyIn + fee
+    // Because profit = winnings - buyIn - fee, so winnings = profit + buyIn + fee
+    const bankrollProfit = form.bankrollFinal - form.bankrollInitial;
+    form.winnings = bankrollProfit + form.buyIn + form.fee;
+  }
+}
+
 // Reset form when modal opens
 watch(() => props.isOpen, (isOpen) => {
   if (isOpen) {
@@ -244,6 +288,8 @@ watch(() => props.isOpen, (isOpen) => {
     form.buyIn = 0;
     form.fee = 0;
     form.winnings = 0;
+    form.bankrollInitial = null;
+    form.bankrollFinal = null;
     form.venue = '';
     form.site = '';
     form.notes = '';

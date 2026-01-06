@@ -132,6 +132,34 @@
           </div>
         </div>
 
+        <!-- Bankroll Initial & Final (optional) -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="label">Bankroll Initial (optional)</label>
+            <input
+              v-model.number="form.bankrollInitial"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="0"
+              class="input font-mono"
+              @input="calculateResult"
+            >
+          </div>
+          <div>
+            <label class="label">Bankroll Final (optional)</label>
+            <input
+              v-model.number="form.bankrollFinal"
+              type="number"
+              step="1"
+              min="0"
+              placeholder="0"
+              class="input font-mono"
+              @input="calculateResult"
+            >
+          </div>
+        </div>
+
         <!-- Result & Duration -->
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -217,6 +245,8 @@ const form = reactive({
   stake: '',
   cashIn: null as number | null,
   cashOut: null as number | null,
+  bankrollInitial: null as number | null,
+  bankrollFinal: null as number | null,
   result: 0,
   duration: 120,
   location: '',
@@ -228,11 +258,17 @@ const form = reactive({
 const errors = reactive<Record<string, string>>({});
 
 const hasCalculatedResult = computed(() => {
-  return form.cashIn !== null && form.cashOut !== null && form.cashIn > 0;
+  const hasBankroll = form.bankrollInitial !== null && form.bankrollFinal !== null && form.bankrollInitial > 0;
+  const hasCashInOut = form.cashIn !== null && form.cashOut !== null && form.cashIn > 0;
+  return hasBankroll || hasCashInOut;
 });
 
 function calculateResult() {
-  if (form.cashIn !== null && form.cashOut !== null && form.cashIn > 0) {
+  // Bankroll takes priority over cash in/out
+  if (form.bankrollInitial !== null && form.bankrollFinal !== null && form.bankrollInitial > 0) {
+    form.result = form.bankrollFinal - form.bankrollInitial;
+  }
+  else if (form.cashIn !== null && form.cashOut !== null && form.cashIn > 0) {
     form.result = form.cashOut - form.cashIn;
   }
 }
