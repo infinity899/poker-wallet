@@ -1,28 +1,28 @@
 <template>
-  <div class="space-y-3">
+  <div class="space-y-2">
     <NuxtLink
       v-for="session in sessions"
       :key="session.id"
       :to="`/sessions/${session.id}`"
-      class="card p-4 block hover:shadow-md dark:hover:shadow-gray-900/50 transition-shadow"
+      class="card-interactive p-4 block"
     >
       <div class="flex justify-between items-start mb-2">
-        <div>
-          <p class="font-semibold text-gray-900 dark:text-gray-100">
+        <div class="min-w-0">
+          <p class="font-medium text-foreground dark:text-foreground-dark truncate">
             {{ session.game }} {{ session.stake }}
           </p>
-          <p class="text-sm text-gray-500 dark:text-gray-400">
+          <p class="text-xs text-foreground-muted dark:text-foreground-dark-muted">
             {{ formatDate(session.date) }}
           </p>
         </div>
         <p
-          class="text-lg font-bold"
+          class="text-base font-semibold data-value shrink-0 ml-3"
           :class="session.result >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
         >
           {{ formatProfit(session.result) }}
         </p>
       </div>
-      <div class="flex gap-4 text-sm text-gray-500 dark:text-gray-400">
+      <div class="flex gap-3 text-xs text-foreground-muted dark:text-foreground-dark-muted">
         <span>{{ session.type === 'live' ? session.location : session.site }}</span>
         <span>{{ formatDuration(session.duration) }}</span>
       </div>
@@ -30,7 +30,7 @@
         <span
           v-for="tag in session.tags"
           :key="tag"
-          class="badge-gray"
+          class="badge-neutral badge-pill text-2xs"
         >
           {{ tag }}
         </span>
@@ -39,9 +39,11 @@
 
     <div
       v-if="sessions.length === 0"
-      class="card p-8 text-center text-gray-500 dark:text-gray-400"
+      class="card empty-state"
     >
-      No sessions yet. Add your first session!
+      <p class="empty-state-description">
+        No sessions yet. Add your first session!
+      </p>
     </div>
   </div>
 </template>

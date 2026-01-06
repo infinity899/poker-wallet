@@ -1,19 +1,19 @@
 <template>
-  <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-14 px-4 flex items-center justify-between pt-safe">
+  <header class="bg-surface dark:bg-surface-dark-secondary border-b border-border dark:border-border-dark h-14 px-4 flex items-center justify-between pt-safe">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-        <span class="text-white font-bold text-sm">P</span>
+      <div class="w-8 h-8 bg-accent-600 dark:bg-accent-500 rounded-lg flex items-center justify-center">
+        <span class="text-white font-semibold text-sm">P</span>
       </div>
-      <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+      <h1 class="text-base font-semibold text-foreground dark:text-foreground-dark tracking-tight">
         {{ pageTitle }}
       </h1>
     </div>
 
     <NuxtLink
       to="/settings"
-      class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+      class="p-2 rounded-md hover:bg-surface-tertiary dark:hover:bg-surface-dark-tertiary transition-colors"
     >
-      <Cog6ToothIcon class="w-6 h-6 text-gray-600 dark:text-gray-400" />
+      <Cog6ToothIcon class="w-5 h-5 text-foreground-muted dark:text-foreground-dark-muted" />
     </NuxtLink>
   </header>
 </template>

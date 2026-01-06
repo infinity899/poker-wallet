@@ -1,17 +1,19 @@
 <template>
-  <nav class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 h-16 grid grid-cols-5 pb-safe">
+  <nav class="bg-surface dark:bg-surface-dark-secondary border-t border-border dark:border-border-dark h-16 grid grid-cols-5 pb-safe">
     <NuxtLink
       v-for="item in navItems"
       :key="item.path"
       :to="item.path"
-      class="flex flex-col items-center justify-center gap-1 transition-colors"
-      :class="isActive(item.path) ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'"
+      class="flex flex-col items-center justify-center gap-1 transition-colors duration-150"
+      :class="isActive(item.path)
+        ? 'text-accent-600 dark:text-accent-400'
+        : 'text-foreground-muted dark:text-foreground-dark-muted'"
     >
       <component
         :is="isActive(item.path) ? item.iconActive : item.icon"
-        class="w-6 h-6"
+        class="w-5 h-5"
       />
-      <span class="text-xs font-medium">{{ item.label }}</span>
+      <span class="text-2xs font-medium">{{ item.label }}</span>
     </NuxtLink>
   </nav>
 </template>

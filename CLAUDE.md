@@ -169,7 +169,7 @@ Run with: `npm run test`
 ## Code Style
 
 - ESLint with @antfu/eslint-config
-- Single quotes, no semicolons
+- Single quotes
 - 2-space indentation
 - Explicit function return types in utils
 - Use `computed()` for derived state in components

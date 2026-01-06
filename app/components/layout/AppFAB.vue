@@ -9,28 +9,28 @@
       leave-from-class="opacity-100 translate-y-0"
       leave-to-class="opacity-0 translate-y-4"
     >
-      <div v-if="showMenu" class="absolute bottom-16 right-0 flex flex-col gap-3 items-end mb-2">
+      <div v-if="showMenu" class="absolute bottom-16 right-0 flex flex-col gap-2 items-end mb-2">
         <button
           v-for="item in menuItems"
           :key="item.id"
-          class="flex items-center gap-3 pr-4 pl-3 py-2 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl dark:shadow-gray-900/50 transition-shadow"
+          class="flex items-center gap-3 pr-4 pl-3 py-2 bg-surface dark:bg-surface-dark-secondary rounded-full shadow-sm border border-border dark:border-border-dark hover:border-border-strong dark:hover:border-border-dark-strong transition-all"
           @click="handleMenuItemClick(item)"
         >
-          <div class="w-8 h-8 rounded-full flex items-center justify-center" :class="[item.color]">
-            <PlusIcon class="w-4 h-4 text-white" />
+          <div class="w-7 h-7 rounded-full flex items-center justify-center" :class="[item.color]">
+            <PlusIcon class="w-3.5 h-3.5 text-white" />
           </div>
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">{{ item.label }}</span>
+          <span class="text-sm font-medium text-foreground dark:text-foreground-dark whitespace-nowrap">{{ item.label }}</span>
         </button>
       </div>
     </Transition>
 
     <!-- FAB Button -->
     <button
-      class="w-14 h-14 bg-primary-600 text-white rounded-full shadow-lg hover:bg-primary-700 hover:shadow-xl flex items-center justify-center transition-all active:scale-95"
+      class="w-12 h-12 bg-accent-600 dark:bg-accent-500 text-white rounded-full shadow-md hover:bg-accent-700 dark:hover:bg-accent-600 flex items-center justify-center transition-all duration-150 active:scale-95"
       :class="{ 'rotate-45': showMenu }"
       @click="handleFabClick"
     >
-      <PlusIcon class="w-6 h-6 transition-transform" />
+      <PlusIcon class="w-5 h-5 transition-transform" />
     </button>
   </div>
 </template>
@@ -58,7 +58,7 @@ const router = useRouter();
 
 const menuItems: MenuItem[] = [
   { id: 'cash', label: 'Cash Session', path: '/sessions/new', color: 'bg-success-500' },
-  { id: 'tournament', label: 'Tournament', path: '/tournaments/new', color: 'bg-primary-500' },
+  { id: 'tournament', label: 'Tournament', path: '/tournaments/new', color: 'bg-violet-500' },
   { id: 'tournament-session', label: 'Tournament Session', action: 'logTournamentSession', color: 'bg-purple-500' },
 ];
 

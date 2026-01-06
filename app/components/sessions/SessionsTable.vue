@@ -1,94 +1,87 @@
 <template>
   <div class="card overflow-hidden">
-    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-      <thead class="bg-gray-50 dark:bg-gray-700">
-        <tr>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-            Date
-          </th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-            Type
-          </th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-            Game
-          </th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-            Stakes
-          </th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-            Venue/Site
-          </th>
-          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-            Duration
-          </th>
-          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-            Result
-          </th>
-          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-            Actions
-          </th>
-        </tr>
-      </thead>
-      <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-        <tr
-          v-for="session in sessions"
-          :key="session.id"
-          class="hover:bg-gray-50 dark:hover:bg-gray-700/50"
-        >
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-            {{ formatDate(session.date) }}
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm">
-            <span
-              class="badge"
-              :class="session.type === 'live' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'"
-            >
-              {{ session.type }}
-            </span>
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-            {{ session.game }}
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-            {{ session.stake }}
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-            {{ session.type === 'live' ? session.location : session.site }}
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-            {{ formatDuration(session.duration) }}
-          </td>
-          <td
-            class="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold"
-            :class="session.result >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
+    <div class="table-container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Game</th>
+            <th>Stakes</th>
+            <th>Venue/Site</th>
+            <th>Duration</th>
+            <th class="text-right">
+              Result
+            </th>
+            <th class="text-right">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="session in sessions"
+            :key="session.id"
           >
-            {{ formatProfit(session.result) }}
-          </td>
-          <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-            <div class="flex gap-2 justify-end">
-              <NuxtLink
-                :to="`/sessions/${session.id}`"
-                class="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded"
+            <td class="whitespace-nowrap text-foreground dark:text-foreground-dark">
+              {{ formatDate(session.date) }}
+            </td>
+            <td class="whitespace-nowrap">
+              <span
+                class="badge"
+                :class="session.type === 'live'
+                  ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                  : 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'"
               >
-                <PencilIcon class="w-4 h-4 text-gray-500 dark:text-gray-400" />
-              </NuxtLink>
-              <button
-                class="p-1 hover:bg-danger-50 dark:hover:bg-danger-900/30 rounded"
-                @click.prevent="emit('delete', session.id)"
-              >
-                <TrashIcon class="w-4 h-4 text-danger-500" />
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+                {{ session.type }}
+              </span>
+            </td>
+            <td class="whitespace-nowrap text-foreground dark:text-foreground-dark">
+              {{ session.game }}
+            </td>
+            <td class="whitespace-nowrap text-foreground dark:text-foreground-dark font-mono text-xs">
+              {{ session.stake }}
+            </td>
+            <td class="whitespace-nowrap text-foreground-muted dark:text-foreground-dark-muted">
+              {{ session.type === 'live' ? session.location : session.site }}
+            </td>
+            <td class="whitespace-nowrap text-foreground-muted dark:text-foreground-dark-muted">
+              {{ formatDuration(session.duration) }}
+            </td>
+            <td
+              class="whitespace-nowrap text-right font-semibold data-value"
+              :class="session.result >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
+            >
+              {{ formatProfit(session.result) }}
+            </td>
+            <td class="whitespace-nowrap text-right">
+              <div class="flex gap-1 justify-end">
+                <NuxtLink
+                  :to="`/sessions/${session.id}`"
+                  class="p-1.5 hover:bg-surface-tertiary dark:hover:bg-surface-dark-tertiary rounded-md transition-colors"
+                >
+                  <PencilIcon class="w-4 h-4 text-foreground-muted dark:text-foreground-dark-muted" />
+                </NuxtLink>
+                <button
+                  class="p-1.5 hover:bg-danger-50 dark:hover:bg-danger-900/30 rounded-md transition-colors"
+                  @click.prevent="emit('delete', session.id)"
+                >
+                  <TrashIcon class="w-4 h-4 text-danger-500 dark:text-danger-400" />
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <div
       v-if="sessions.length === 0"
-      class="p-8 text-center text-gray-500 dark:text-gray-400"
+      class="empty-state"
     >
-      No sessions yet. Add your first session!
+      <p class="empty-state-description">
+        No sessions yet. Add your first session!
+      </p>
     </div>
   </div>
 </template>

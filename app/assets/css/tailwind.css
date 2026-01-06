@@ -8,96 +8,429 @@
   }
 
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
-    @apply dark:bg-gray-900 dark:text-gray-100;
+    /* Cool slate foundation */
+    @apply bg-surface-secondary text-foreground antialiased;
+    @apply dark:bg-surface-dark dark:text-foreground-dark;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Typography defaults */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight text-foreground;
+    @apply dark:text-foreground-dark;
+  }
+
+  /* Tabular numbers for data */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 }
 
 @layer components {
-  /* Buttons */
+  /* ============================================
+     BUTTONS - Refined, minimal with clear hierarchy
+     ============================================ */
   .btn {
-    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2
+           px-3 py-2 text-sm font-medium
+           rounded-md transition-all duration-150
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed
+           whitespace-nowrap select-none;
   }
 
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+    @apply btn bg-accent-600 text-white
+           hover:bg-accent-700 active:bg-accent-800
+           focus-visible:ring-accent-500;
+    @apply dark:bg-accent-500 dark:hover:bg-accent-600 dark:active:bg-accent-700;
   }
 
   .btn-secondary {
-    @apply btn bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-500;
-    @apply dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600;
-  }
-
-  .btn-danger {
-    @apply btn bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500;
+    @apply btn bg-surface text-foreground
+           border border-border-strong
+           hover:bg-surface-secondary hover:border-border-strong
+           active:bg-surface-tertiary
+           focus-visible:ring-accent-500;
+    @apply dark:bg-surface-dark-secondary dark:text-foreground-dark
+           dark:border-border-dark-strong
+           dark:hover:bg-surface-dark-tertiary;
   }
 
   .btn-ghost {
-    @apply btn bg-transparent text-gray-600 hover:bg-gray-100 focus:ring-gray-500;
-    @apply dark:text-gray-400 dark:hover:bg-gray-800;
+    @apply btn bg-transparent text-foreground-secondary
+           hover:bg-surface-tertiary hover:text-foreground
+           active:bg-slate-200
+           focus-visible:ring-accent-500;
+    @apply dark:text-foreground-dark-secondary
+           dark:hover:bg-surface-dark-tertiary dark:hover:text-foreground-dark;
+  }
+
+  .btn-danger {
+    @apply btn bg-danger-600 text-white
+           hover:bg-danger-700 active:bg-danger-800
+           focus-visible:ring-danger-500;
+    @apply dark:bg-danger-500 dark:hover:bg-danger-600;
   }
 
   .btn-sm {
-    @apply px-3 py-1.5 text-sm;
+    @apply px-2.5 py-1.5 text-xs gap-1.5;
   }
 
   .btn-lg {
-    @apply px-6 py-3 text-lg;
+    @apply px-4 py-2.5 text-base gap-2.5;
   }
 
-  /* Form inputs */
+  .btn-icon {
+    @apply p-2 aspect-square;
+  }
+
+  .btn-icon.btn-sm {
+    @apply p-1.5;
+  }
+
+  /* ============================================
+     FORM INPUTS - Clean borders, refined focus
+     ============================================ */
   .input {
-    @apply block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm;
-    @apply dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400;
+    @apply block w-full px-3 py-2 text-sm
+           bg-surface text-foreground
+           border border-border-strong rounded-md
+           placeholder:text-foreground-faint
+           transition-colors duration-150
+           focus:outline-none focus:border-accent-500 focus:ring-1 focus:ring-accent-500;
+    @apply dark:bg-surface-dark-secondary dark:text-foreground-dark
+           dark:border-border-dark-strong
+           dark:placeholder:text-foreground-dark-faint
+           dark:focus:border-accent-400 dark:focus:ring-accent-400;
   }
 
   .input-error {
     @apply border-danger-500 focus:border-danger-500 focus:ring-danger-500;
+    @apply dark:border-danger-400 dark:focus:border-danger-400 dark:focus:ring-danger-400;
   }
 
-  /* Cards */
+  /* Select trigger for custom dropdowns */
+  .select-trigger {
+    @apply input cursor-pointer
+           inline-flex items-center justify-between gap-2
+           whitespace-nowrap;
+  }
+
+  /* Label styling */
+  .label {
+    @apply block text-sm font-medium text-foreground-secondary mb-1.5;
+    @apply dark:text-foreground-dark-secondary;
+  }
+
+  /* ============================================
+     CARDS - Borders-only approach, subtle surface shifts
+     ============================================ */
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-100;
-    @apply dark:bg-gray-800 dark:border-gray-700;
+    @apply bg-surface rounded-lg
+           border border-border;
+    @apply dark:bg-surface-dark-secondary dark:border-border-dark;
   }
 
-  /* Profit/Loss colors */
+  .card-elevated {
+    @apply card shadow-sm;
+    @apply dark:shadow-dark-sm;
+  }
+
+  .card-interactive {
+    @apply card cursor-pointer
+           transition-all duration-150
+           hover:border-border-strong hover:shadow-xs;
+    @apply dark:hover:border-border-dark-strong;
+  }
+
+  /* Card sections */
+  .card-header {
+    @apply px-4 py-3 border-b border-border;
+    @apply dark:border-border-dark;
+  }
+
+  .card-body {
+    @apply p-4;
+  }
+
+  .card-footer {
+    @apply px-4 py-3 border-t border-border bg-surface-secondary;
+    @apply dark:border-border-dark dark:bg-surface-dark-tertiary;
+  }
+
+  /* ============================================
+     DATA DISPLAY - Monospace for numbers
+     ============================================ */
+  .data-value {
+    @apply font-mono tabular-nums tracking-tight;
+  }
+
   .profit {
-    @apply text-success-600;
+    @apply text-success-600 font-medium;
+    @apply dark:text-success-400;
   }
 
   .loss {
-    @apply text-danger-600;
+    @apply text-danger-600 font-medium;
+    @apply dark:text-danger-400;
   }
 
-  /* Badge */
+  .profit-bg {
+    @apply bg-success-50 text-success-700;
+    @apply dark:bg-success-900/30 dark:text-success-400;
+  }
+
+  .loss-bg {
+    @apply bg-danger-50 text-danger-700;
+    @apply dark:bg-danger-900/30 dark:text-danger-400;
+  }
+
+  /* ============================================
+     BADGES - Subtle, refined
+     ============================================ */
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center gap-1
+           px-2 py-0.5 text-xs font-medium
+           rounded-md whitespace-nowrap;
   }
 
-  .badge-primary {
-    @apply badge bg-primary-100 text-primary-800;
-    @apply dark:bg-primary-900 dark:text-primary-200;
+  .badge-neutral {
+    @apply badge bg-surface-tertiary text-foreground-secondary;
+    @apply dark:bg-surface-dark-tertiary dark:text-foreground-dark-secondary;
+  }
+
+  .badge-accent {
+    @apply badge bg-accent-50 text-accent-700;
+    @apply dark:bg-accent-900/30 dark:text-accent-400;
   }
 
   .badge-success {
-    @apply badge bg-success-100 text-success-800;
-    @apply dark:bg-success-900 dark:text-success-200;
+    @apply badge bg-success-50 text-success-700;
+    @apply dark:bg-success-900/30 dark:text-success-400;
   }
 
   .badge-danger {
-    @apply badge bg-danger-100 text-danger-800;
-    @apply dark:bg-danger-900 dark:text-danger-200;
+    @apply badge bg-danger-50 text-danger-700;
+    @apply dark:bg-danger-900/30 dark:text-danger-400;
   }
 
   .badge-warning {
-    @apply badge bg-warning-100 text-warning-800;
-    @apply dark:bg-warning-900 dark:text-warning-200;
+    @apply badge bg-warning-50 text-warning-700;
+    @apply dark:bg-warning-900/30 dark:text-warning-400;
   }
 
-  .badge-gray {
-    @apply badge bg-gray-100 text-gray-800;
-    @apply dark:bg-gray-700 dark:text-gray-200;
+  /* Pill variant - for tags */
+  .badge-pill {
+    @apply rounded-full px-2.5;
+  }
+
+  /* ============================================
+     NAVIGATION - Clean, minimal
+     ============================================ */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2
+           text-sm font-medium text-foreground-secondary
+           rounded-md transition-colors duration-150
+           hover:bg-surface-tertiary hover:text-foreground;
+    @apply dark:text-foreground-dark-secondary
+           dark:hover:bg-surface-dark-tertiary dark:hover:text-foreground-dark;
+  }
+
+  .nav-item-active {
+    @apply bg-accent-50 text-accent-700;
+    @apply dark:bg-accent-900/20 dark:text-accent-400;
+  }
+
+  .nav-item-active .nav-icon {
+    @apply text-accent-600;
+    @apply dark:text-accent-400;
+  }
+
+  .nav-icon {
+    @apply w-5 h-5 text-foreground-muted shrink-0;
+    @apply dark:text-foreground-dark-muted;
+  }
+
+  /* ============================================
+     TABLES - Clean, data-focused
+     ============================================ */
+  .table-container {
+    @apply overflow-x-auto;
+  }
+
+  .table {
+    @apply w-full text-sm;
+  }
+
+  .table th {
+    @apply px-4 py-3 text-left text-xs font-medium
+           text-foreground-muted uppercase tracking-wider
+           bg-surface-secondary border-b border-border;
+    @apply dark:text-foreground-dark-muted
+           dark:bg-surface-dark-tertiary dark:border-border-dark;
+  }
+
+  .table td {
+    @apply px-4 py-3 text-foreground border-b border-border-subtle;
+    @apply dark:text-foreground-dark dark:border-border-dark-subtle;
+  }
+
+  .table tbody tr {
+    @apply transition-colors duration-100;
+  }
+
+  .table tbody tr:hover {
+    @apply bg-surface-secondary;
+    @apply dark:bg-surface-dark-tertiary;
+  }
+
+  /* ============================================
+     STAT CARDS - For dashboard metrics
+     ============================================ */
+  .stat-card {
+    @apply card p-4;
+  }
+
+  .stat-label {
+    @apply text-xs font-medium text-foreground-muted uppercase tracking-wider mb-1;
+    @apply dark:text-foreground-dark-muted;
+  }
+
+  .stat-value {
+    @apply text-2xl font-semibold tracking-tight data-value;
+  }
+
+  .stat-change {
+    @apply text-xs font-medium mt-1 flex items-center gap-1;
+  }
+
+  /* ============================================
+     DIVIDERS
+     ============================================ */
+  .divider {
+    @apply border-t border-border;
+    @apply dark:border-border-dark;
+  }
+
+  .divider-vertical {
+    @apply border-l border-border h-full;
+    @apply dark:border-border-dark;
+  }
+
+  /* ============================================
+     EMPTY STATES
+     ============================================ */
+  .empty-state {
+    @apply flex flex-col items-center justify-center py-12 px-4 text-center;
+  }
+
+  .empty-state-icon {
+    @apply w-12 h-12 text-foreground-faint mb-4;
+    @apply dark:text-foreground-dark-faint;
+  }
+
+  .empty-state-title {
+    @apply text-base font-medium text-foreground mb-1;
+    @apply dark:text-foreground-dark;
+  }
+
+  .empty-state-description {
+    @apply text-sm text-foreground-muted max-w-sm;
+    @apply dark:text-foreground-dark-muted;
+  }
+
+  /* ============================================
+     OVERLAYS & MODALS
+     ============================================ */
+  .overlay {
+    @apply fixed inset-0 bg-slate-900/60 backdrop-blur-sm;
+    @apply dark:bg-black/70;
+  }
+
+  .modal {
+    @apply bg-surface rounded-xl shadow-md
+           border border-border
+           max-w-lg w-full max-h-[90vh] overflow-auto;
+    @apply dark:bg-surface-dark-secondary dark:border-border-dark;
+  }
+
+  .modal-header {
+    @apply px-5 py-4 border-b border-border;
+    @apply dark:border-border-dark;
+  }
+
+  .modal-body {
+    @apply p-5;
+  }
+
+  .modal-footer {
+    @apply px-5 py-4 border-t border-border bg-surface-secondary flex justify-end gap-3;
+    @apply dark:border-border-dark dark:bg-surface-dark-tertiary;
+  }
+
+  /* ============================================
+     DROPDOWN MENUS
+     ============================================ */
+  .dropdown-menu {
+    @apply absolute z-50 mt-1 py-1 min-w-[8rem]
+           bg-surface rounded-lg shadow-md
+           border border-border
+           animate-fade-in;
+    @apply dark:bg-surface-dark-secondary dark:border-border-dark;
+  }
+
+  .dropdown-item {
+    @apply flex items-center gap-2 px-3 py-2
+           text-sm text-foreground
+           cursor-pointer transition-colors duration-100
+           hover:bg-surface-tertiary;
+    @apply dark:text-foreground-dark
+           dark:hover:bg-surface-dark-tertiary;
+  }
+
+  .dropdown-item-danger {
+    @apply text-danger-600 hover:bg-danger-50;
+    @apply dark:text-danger-400 dark:hover:bg-danger-900/30;
+  }
+
+  /* ============================================
+     FILTERS & CHIPS
+     ============================================ */
+  .filter-chip {
+    @apply inline-flex items-center gap-1.5
+           px-3 py-1.5 text-sm font-medium
+           rounded-full border border-transparent
+           transition-all duration-150 cursor-pointer
+           bg-surface-tertiary text-foreground-secondary
+           hover:bg-slate-200;
+    @apply dark:bg-surface-dark-tertiary dark:text-foreground-dark-secondary
+           dark:hover:bg-slate-700;
+  }
+
+  .filter-chip-active {
+    @apply bg-accent-50 text-accent-700 border-accent-200;
+    @apply dark:bg-accent-900/30 dark:text-accent-400 dark:border-accent-700/50;
+  }
+
+  /* ============================================
+     SKELETON LOADERS
+     ============================================ */
+  .skeleton {
+    @apply bg-surface-tertiary rounded animate-pulse;
+    @apply dark:bg-surface-dark-tertiary;
+  }
+
+  .skeleton-text {
+    @apply skeleton h-4 w-full;
+  }
+
+  .skeleton-heading {
+    @apply skeleton h-6 w-3/4;
+  }
+
+  .skeleton-avatar {
+    @apply skeleton w-10 h-10 rounded-full;
   }
 }
 
@@ -119,5 +452,40 @@
 
   .pt-safe {
     padding-top: env(safe-area-inset-top);
+  }
+
+  /* Focus ring utility */
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2
+           focus-visible:ring-accent-500 focus-visible:ring-offset-2;
+  }
+
+  /* Truncate with ellipsis */
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Text color utilities using design system */
+  .text-primary {
+    @apply text-foreground;
+    @apply dark:text-foreground-dark;
+  }
+
+  .text-secondary {
+    @apply text-foreground-secondary;
+    @apply dark:text-foreground-dark-secondary;
+  }
+
+  .text-muted {
+    @apply text-foreground-muted;
+    @apply dark:text-foreground-dark-muted;
+  }
+
+  .text-faint {
+    @apply text-foreground-faint;
+    @apply dark:text-foreground-dark-faint;
   }
 }

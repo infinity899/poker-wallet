@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-screen bg-surface-secondary dark:bg-surface-dark">
     <!-- Announcement Banner -->
     <LayoutAppAnnouncement class="sticky top-0 z-50" />
 
@@ -105,11 +105,11 @@ watch(
         dismissible: true,
         action: authStore.isAuthenticated
           ? {
-              label: 'Switch to real data →',
+              label: 'Switch to real data',
               handler: switchToRealData,
             }
           : {
-              label: 'Sign in to track your results →',
+              label: 'Sign in to track your results',
               handler: () => router.push('/auth/login'),
             },
       });

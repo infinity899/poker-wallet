@@ -1,8 +1,8 @@
 import type { DbTournament, NewTournament, Tournament, TournamentFilters, TournamentStats } from '~/types';
 import { defineStore } from 'pinia';
-import { dbTournamentToTournament, tournamentToDbTournament } from '~/composables/useDatabase';
-import { useTypedSupabaseClient } from '~/composables/useTypedSupabase';
+import { dbTournamentToTournament } from '~/composables/useDatabase';
 import { isDateInRange } from '~/composables/useFilters';
+import { useTypedSupabaseClient } from '~/composables/useTypedSupabase';
 import { DEFAULT_TOURNAMENT_FILTERS } from '~/types';
 import { calculateTournamentStats } from '~/utils/calculations';
 
