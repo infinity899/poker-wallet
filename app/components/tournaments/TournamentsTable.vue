@@ -30,7 +30,10 @@
         <tr
           v-for="tournament in tournaments"
           :key="tournament.id"
-          class="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+          class="transition-colors"
+          :class="tournament.status === 'in_progress'
+            ? 'bg-amber-50/50 dark:bg-amber-900/10 border-l-2 border-amber-400 hover:bg-amber-100/50 dark:hover:bg-amber-900/20'
+            : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'"
         >
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
             {{ formatDate(tournament.date) }}
@@ -50,35 +53,52 @@
             {{ formatCurrency(tournament.buyIn) }}
           </td>
           <td class="px-6 py-4 whitespace-nowrap text-sm">
-            <span v-if="tournament.finishPosition" class="text-gray-900 dark:text-gray-100">
-              {{ formatPosition(tournament.finishPosition) }}
-              <span v-if="tournament.fieldSize" class="text-gray-400">
-                / {{ tournament.fieldSize }}
+            <template v-if="tournament.status === 'in_progress'">
+              <span class="text-gray-400 dark:text-gray-500">-</span>
+            </template>
+            <template v-else>
+              <span v-if="tournament.finishPosition" class="text-gray-900 dark:text-gray-100">
+                {{ formatPosition(tournament.finishPosition) }}
+                <span v-if="tournament.fieldSize" class="text-gray-400">
+                  / {{ tournament.fieldSize }}
+                </span>
               </span>
-            </span>
-            <span
-              class="ml-2 badge"
-              :class="tournament.cashed ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'"
-            >
-              {{ tournament.cashed ? 'ITM' : 'Bust' }}
-            </span>
+              <span
+                class="ml-2 badge"
+                :class="tournament.cashed ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'"
+              >
+                {{ tournament.cashed ? 'ITM' : 'Bust' }}
+              </span>
+            </template>
           </td>
           <td
             class="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold"
-            :class="getTournamentProfit(tournament) >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
+            :class="tournament.status === 'in_progress'
+              ? 'text-gray-400 dark:text-gray-500'
+              : getTournamentProfit(tournament) >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
           >
-            {{ formatProfit(getTournamentProfit(tournament)) }}
+            {{ tournament.status === 'in_progress' ? '-' : formatProfit(getTournamentProfit(tournament)) }}
           </td>
           <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
             <div class="flex gap-2 justify-end">
               <NuxtLink
+                v-if="tournament.status === 'in_progress'"
                 :to="`/tournaments/${tournament.id}`"
-                class="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded"
+                class="p-1 hover:bg-success-50 dark:hover:bg-success-900/30 rounded transition-colors"
+                title="Complete tournament"
+              >
+                <CheckIcon class="w-4 h-4 text-success-600 dark:text-success-400" />
+              </NuxtLink>
+              <NuxtLink
+                :to="`/tournaments/${tournament.id}`"
+                class="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors"
+                title="Edit tournament"
               >
                 <PencilIcon class="w-4 h-4 text-gray-500 dark:text-gray-400" />
               </NuxtLink>
               <button
-                class="p-1 hover:bg-danger-50 dark:hover:bg-danger-900/30 rounded"
+                class="p-1 hover:bg-danger-50 dark:hover:bg-danger-900/30 rounded transition-colors"
+                title="Delete tournament"
                 @click.prevent="emit('delete', tournament.id)"
               >
                 <TrashIcon class="w-4 h-4 text-danger-500" />
@@ -100,7 +120,7 @@
 
 <script setup lang="ts">
 import type { Tournament } from '~/types';
-import { PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
+import { CheckIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import { formatCurrency, formatDate, formatPosition, formatProfit } from '~/utils/formatters';
 
 defineProps<{

@@ -21,9 +21,12 @@ export function dbSessionToSession(dbSession: DbSession): CashSession {
     tableCount: dbSession.table_count ?? undefined,
     buyInTotal: dbSession.buy_in_total ?? undefined,
     cashOutTotal: dbSession.cash_out_total ?? undefined,
+    bankrollInitial: dbSession.bankroll_initial ?? undefined,
+    bankrollFinal: dbSession.bankroll_final ?? undefined,
     rakeFees: dbSession.rake_fees ?? undefined,
     notes: dbSession.notes ?? undefined,
     tags: dbSession.tags || [],
+    status: dbSession.status || 'completed',
     createdAt: dbSession.created_at,
     updatedAt: dbSession.updated_at,
   };
@@ -49,9 +52,12 @@ export function sessionToDbSession(session: Omit<CashSession, 'id' | 'createdAt'
     table_count: session.tableCount ?? null,
     buy_in_total: session.buyInTotal ?? null,
     cash_out_total: session.cashOutTotal ?? null,
+    bankroll_initial: session.bankrollInitial ?? null,
+    bankroll_final: session.bankrollFinal ?? null,
     rake_fees: session.rakeFees ?? null,
     notes: session.notes ?? null,
     tags: session.tags || [],
+    status: session.status || 'completed',
   };
 }
 
@@ -74,6 +80,7 @@ export function dbTournamentToTournament(dbTournament: DbTournament): Tournament
     cashed: dbTournament.cashed ?? undefined,
     notes: dbTournament.notes ?? undefined,
     tags: dbTournament.tags || [],
+    status: dbTournament.status || 'completed',
     createdAt: dbTournament.created_at,
     updatedAt: dbTournament.updated_at,
   };
@@ -98,6 +105,7 @@ export function tournamentToDbTournament(tournament: Omit<Tournament, 'id' | 'cr
     cashed: tournament.cashed ?? null,
     notes: tournament.notes ?? null,
     tags: tournament.tags || [],
+    status: tournament.status || 'completed',
   };
 }
 
@@ -207,11 +215,20 @@ export function useDatabase() {
     if (updates.rakeFees !== undefined) {
       dbUpdates.rake_fees = updates.rakeFees;
     }
+    if (updates.bankrollInitial !== undefined) {
+      dbUpdates.bankroll_initial = updates.bankrollInitial;
+    }
+    if (updates.bankrollFinal !== undefined) {
+      dbUpdates.bankroll_final = updates.bankrollFinal;
+    }
     if (updates.notes !== undefined) {
       dbUpdates.notes = updates.notes;
     }
     if (updates.tags !== undefined) {
       dbUpdates.tags = updates.tags;
+    }
+    if (updates.status !== undefined) {
+      dbUpdates.status = updates.status;
     }
 
     const { data, error } = await supabase
@@ -335,6 +352,9 @@ export function useDatabase() {
     }
     if (updates.tags !== undefined) {
       dbUpdates.tags = updates.tags;
+    }
+    if (updates.status !== undefined) {
+      dbUpdates.status = updates.status;
     }
 
     const { data, error } = await supabase

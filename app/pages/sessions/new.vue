@@ -15,14 +15,22 @@
 
     <form class="space-y-5" @submit.prevent="handleSubmit">
       <div class="card p-5 space-y-4">
-        <!-- Date & Type -->
-        <div class="grid grid-cols-2 gap-4">
+        <!-- Date, Start Time & Type -->
+        <div class="grid grid-cols-3 gap-4">
           <div>
             <label class="label">Date</label>
             <input
               v-model="form.date"
               type="date"
               class="input"
+            >
+          </div>
+          <div>
+            <label class="label">Start Time</label>
+            <input
+              v-model="form.startTime"
+              type="time"
+              class="input font-mono"
             >
           </div>
           <div>
@@ -163,7 +171,7 @@
         <!-- Result & Duration -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="label">Result ($)</label>
+            <label class="label">Result ($) <span v-if="!isInProgress" class="text-foreground-muted dark:text-foreground-dark-muted font-normal">(optional for in-progress)</span></label>
             <input
               v-model.number="form.result"
               type="number"
@@ -173,13 +181,14 @@
             >
           </div>
           <div>
-            <label class="label">Duration (minutes)</label>
+            <label class="label">Duration (min) <span v-if="isInProgress" class="text-foreground-muted dark:text-foreground-dark-muted font-normal">(auto from times)</span></label>
             <input
               v-model.number="form.duration"
               type="number"
-              min="1"
+              min="0"
               class="input font-mono"
               :class="{ 'input-error': errors.duration }"
+              :disabled="isInProgress"
             >
             <p v-if="errors.duration" class="mt-1 text-xs text-danger-600 dark:text-danger-400">
               {{ errors.duration }}
@@ -221,7 +230,10 @@
         <NuxtLink to="/sessions" class="btn-secondary flex-1">
           Cancel
         </NuxtLink>
-        <button type="submit" class="btn-primary flex-1">
+        <button v-if="isInProgress" type="submit" class="btn-primary flex-1">
+          Start Session
+        </button>
+        <button v-else type="submit" class="btn-primary flex-1">
           Save Session
         </button>
       </div>
@@ -230,15 +242,20 @@
 </template>
 
 <script setup lang="ts">
-import type { Currency, GameType, SessionType } from '~/types';
+import type { Currency, GameType, SessionStatus, SessionType } from '~/types';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 
 const sessionsStore = useSessionsStore();
 const referenceStore = useReferenceStore();
 const router = useRouter();
 
+// Get current time in HH:mm format
+const now = new Date();
+const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
 const form = reactive({
   date: new Date().toISOString().split('T')[0] as string,
+  startTime: currentTime,
   type: 'live' as SessionType,
   game: 'NLH' as GameType,
   currency: 'USD' as Currency,
@@ -248,11 +265,19 @@ const form = reactive({
   bankrollInitial: null as number | null,
   bankrollFinal: null as number | null,
   result: 0,
-  duration: 120,
+  duration: 0,
   location: '',
   site: '',
   notes: '',
   tags: [] as string[],
+});
+
+// Session is in-progress if no result is determined (no cash out and no bankroll final)
+const isInProgress = computed(() => {
+  const hasCashOut = form.cashOut !== null && form.cashOut > 0;
+  const hasBankrollFinal = form.bankrollFinal !== null && form.bankrollFinal > 0;
+  const hasManualResult = form.result !== 0 && !hasCashOut && !hasBankrollFinal;
+  return !hasCashOut && !hasBankrollFinal && !hasManualResult;
 });
 
 const errors = reactive<Record<string, string>>({});
@@ -282,7 +307,8 @@ function validate() {
     errors.stake = 'Enter valid stakes (e.g., 1/2)';
   }
 
-  if (form.duration < 1) {
+  // Duration only required for completed sessions
+  if (!isInProgress.value && form.duration < 1) {
     errors.duration = 'Duration must be at least 1 minute';
   }
 
@@ -294,8 +320,11 @@ function handleSubmit() {
     return;
   }
 
+  const status: SessionStatus = isInProgress.value ? 'in_progress' : 'completed';
+
   sessionsStore.addSession({
     date: form.date,
+    startTime: form.startTime || undefined,
     type: form.type,
     game: form.game,
     currency: form.currency,
@@ -306,10 +335,13 @@ function handleSubmit() {
     duration: form.duration,
     location: form.type === 'live' ? form.location : undefined,
     site: form.type === 'online' ? form.site : undefined,
-    buyInTotal: form.cashIn || undefined,
-    cashOutTotal: form.cashOut || undefined,
+    buyInTotal: form.cashIn ?? undefined,
+    cashOutTotal: form.cashOut ?? undefined,
+    bankrollInitial: form.bankrollInitial ?? undefined,
+    bankrollFinal: form.bankrollFinal ?? undefined,
     notes: form.notes || undefined,
     tags: form.tags,
+    status,
   });
 
   router.push('/sessions');

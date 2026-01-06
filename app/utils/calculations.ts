@@ -1,5 +1,32 @@
 import type { CashSession, SessionStats, Tournament, TournamentStats } from '~/types';
 
+/**
+ * Calculate duration in minutes from start and end times
+ * Handles sessions spanning midnight
+ */
+export function calculateDurationFromTimes(startTime: string, endTime: string, _date?: string): number {
+  if (!startTime || !endTime) {
+    return 0;
+  }
+
+  const [startHours, startMinutes] = startTime.split(':').map(Number);
+  const [endHours, endMinutes] = endTime.split(':').map(Number);
+
+  if (startHours === undefined || startMinutes === undefined || endHours === undefined || endMinutes === undefined) {
+    return 0;
+  }
+
+  let startTotalMinutes = startHours * 60 + startMinutes;
+  let endTotalMinutes = endHours * 60 + endMinutes;
+
+  // Handle sessions spanning midnight
+  if (endTotalMinutes < startTotalMinutes) {
+    endTotalMinutes += 24 * 60; // Add 24 hours worth of minutes
+  }
+
+  return endTotalMinutes - startTotalMinutes;
+}
+
 export function calculateSessionStats(sessions: CashSession[]): SessionStats {
   if (sessions.length === 0) {
     return {

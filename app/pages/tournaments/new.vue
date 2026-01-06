@@ -214,7 +214,10 @@
         <NuxtLink to="/tournaments" class="btn-secondary flex-1">
           Cancel
         </NuxtLink>
-        <button type="submit" class="btn-primary flex-1">
+        <button v-if="isInProgress" type="submit" class="btn-primary flex-1">
+          Start Tournament
+        </button>
+        <button v-else type="submit" class="btn-primary flex-1">
           Save Tournament
         </button>
       </div>
@@ -223,7 +226,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Currency, SessionType } from '~/types';
+import type { Currency, SessionStatus, SessionType } from '~/types';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 
 const tournamentsStore = useTournamentsStore();
@@ -250,6 +253,11 @@ const form = reactive({
 
 const errors = reactive<Record<string, string>>({});
 
+// Tournament is in-progress if no finish position is set
+const isInProgress = computed(() => {
+  return form.finishPosition === undefined || form.finishPosition === null;
+});
+
 function validate() {
   errors.name = '';
   errors.buyIn = '';
@@ -270,6 +278,8 @@ function handleSubmit() {
     return;
   }
 
+  const status: SessionStatus = isInProgress.value ? 'in_progress' : 'completed';
+
   tournamentsStore.addTournament({
     date: form.date,
     type: form.type,
@@ -286,6 +296,7 @@ function handleSubmit() {
     cashed: form.cashed,
     notes: form.notes || undefined,
     tags: form.tags,
+    status,
   });
 
   router.push('/tournaments');

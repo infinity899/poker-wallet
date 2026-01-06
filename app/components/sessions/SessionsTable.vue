@@ -34,7 +34,10 @@
           <tr
             v-for="session in sessions"
             :key="session.id"
-            class="hover:bg-surface-secondary dark:hover:bg-surface-dark-tertiary transition-colors"
+            class="transition-colors"
+            :class="session.status === 'in_progress'
+              ? 'bg-amber-50/50 dark:bg-amber-900/10 border-l-2 border-amber-400 hover:bg-amber-100/50 dark:hover:bg-amber-900/20'
+              : 'hover:bg-surface-secondary dark:hover:bg-surface-dark-tertiary'"
           >
             <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground dark:text-foreground-dark">
               {{ formatDate(session.date) }}
@@ -63,20 +66,32 @@
             </td>
             <td
               class="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold data-value"
-              :class="session.result >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
+              :class="session.status === 'in_progress'
+                ? 'text-foreground-muted dark:text-foreground-dark-muted'
+                : session.result >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
             >
-              {{ formatProfit(session.result) }}
+              {{ session.status === 'in_progress' ? '-' : formatProfit(session.result) }}
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-right text-sm">
               <div class="flex gap-2 justify-end">
                 <NuxtLink
+                  v-if="session.status === 'in_progress'"
+                  :to="`/sessions/${session.id}`"
+                  class="p-1 hover:bg-success-50 dark:hover:bg-success-900/30 rounded transition-colors"
+                  title="Complete session"
+                >
+                  <CheckIcon class="w-4 h-4 text-success-600 dark:text-success-400" />
+                </NuxtLink>
+                <NuxtLink
                   :to="`/sessions/${session.id}`"
                   class="p-1 hover:bg-surface-tertiary dark:hover:bg-surface-dark-tertiary rounded transition-colors"
+                  title="Edit session"
                 >
                   <PencilIcon class="w-4 h-4 text-foreground-muted dark:text-foreground-dark-muted" />
                 </NuxtLink>
                 <button
                   class="p-1 hover:bg-danger-50 dark:hover:bg-danger-900/30 rounded transition-colors"
+                  title="Delete session"
                   @click.prevent="emit('delete', session.id)"
                 >
                   <TrashIcon class="w-4 h-4 text-danger-500 dark:text-danger-400" />
@@ -101,7 +116,7 @@
 
 <script setup lang="ts">
 import type { CashSession } from '~/types';
-import { PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
+import { CheckIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import { formatDate, formatDuration, formatProfit } from '~/utils/formatters';
 
 defineProps<{

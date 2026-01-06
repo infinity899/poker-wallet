@@ -1,6 +1,7 @@
 export type SessionType = 'live' | 'online';
 export type GameType = 'NLH' | 'PLO' | 'PLO5' | 'Mixed';
 export type Currency = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'RON';
+export type SessionStatus = 'in_progress' | 'completed';
 
 export interface CashSession {
   id: string;
@@ -20,9 +21,12 @@ export interface CashSession {
   tableCount?: number; // for online multi-tabling
   buyInTotal?: number;
   cashOutTotal?: number;
+  bankrollInitial?: number;
+  bankrollFinal?: number;
   rakeFees?: number;
   notes?: string;
   tags: string[];
+  status: SessionStatus; // in_progress or completed
   createdAt: string;
   updatedAt: string;
 }

@@ -5,6 +5,7 @@
       :key="session.id"
       :to="`/sessions/${session.id}`"
       class="card-interactive p-4 block"
+      :class="session.status === 'in_progress' ? 'bg-amber-50/50 dark:bg-amber-900/10 border-l-2 border-amber-400' : ''"
     >
       <div class="flex justify-between items-start mb-2">
         <div class="min-w-0">
@@ -17,9 +18,11 @@
         </div>
         <p
           class="text-base font-semibold data-value shrink-0 ml-3"
-          :class="session.result >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
+          :class="session.status === 'in_progress'
+            ? 'text-foreground-muted dark:text-foreground-dark-muted'
+            : session.result >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
         >
-          {{ formatProfit(session.result) }}
+          {{ session.status === 'in_progress' ? 'In Progress' : formatProfit(session.result) }}
         </p>
       </div>
       <div class="flex gap-3 text-xs text-foreground-muted dark:text-foreground-dark-muted">

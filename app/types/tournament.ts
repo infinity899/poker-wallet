@@ -1,4 +1,4 @@
-import type { Currency, SessionType } from './session';
+import type { Currency, SessionStatus, SessionType } from './session';
 
 export interface Tournament {
   id: string;
@@ -17,6 +17,7 @@ export interface Tournament {
   cashed?: boolean; // explicit ITM flag (winnings > 0 doesn't always mean ITM with bounties)
   notes?: string;
   tags: string[];
+  status: SessionStatus; // in_progress or completed
   createdAt: string;
   updatedAt: string;
   // Session fields (for batch logging multiple tournaments)

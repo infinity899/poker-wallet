@@ -20,9 +20,12 @@ export interface DbSession {
   table_count: number | null;
   buy_in_total: number | null;
   cash_out_total: number | null;
+  bankroll_initial: number | null;
+  bankroll_final: number | null;
   rake_fees: number | null;
   notes: string | null;
   tags: string[];
+  status: 'in_progress' | 'completed';
   created_at: string;
   updated_at: string;
 }
@@ -45,6 +48,7 @@ export interface DbTournament {
   cashed: boolean | null;
   notes: string | null;
   tags: string[];
+  status: 'in_progress' | 'completed';
   created_at: string;
   updated_at: string;
 }

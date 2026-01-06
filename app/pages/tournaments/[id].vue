@@ -15,6 +15,13 @@
 
     <form class="space-y-5" @submit.prevent="handleSubmit">
       <div class="card p-5 space-y-4">
+        <!-- In Progress Banner -->
+        <div v-if="isCurrentlyInProgress" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg p-3">
+          <p class="text-sm text-amber-800 dark:text-amber-200">
+            This tournament is in progress. Add finish position and winnings to complete it.
+          </p>
+        </div>
+
         <!-- Date & Type -->
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -214,7 +221,10 @@
         <NuxtLink to="/tournaments" class="btn-secondary flex-1">
           Cancel
         </NuxtLink>
-        <button type="submit" class="btn-primary flex-1">
+        <button v-if="isCurrentlyInProgress && willBeCompleted" type="submit" class="btn-primary flex-1">
+          Complete Tournament
+        </button>
+        <button v-else type="submit" class="btn-primary flex-1">
           Save Changes
         </button>
       </div>
@@ -223,7 +233,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Currency, SessionType } from '~/types';
+import type { Currency, SessionStatus, SessionType } from '~/types';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 
 const tournamentsStore = useTournamentsStore();
@@ -259,6 +269,16 @@ const form = reactive({
 
 const errors = reactive<Record<string, string>>({});
 
+// Check if the tournament is currently in progress (based on stored status)
+const isCurrentlyInProgress = computed(() => {
+  return tournament.value?.status === 'in_progress';
+});
+
+// Check if the form will result in a completed tournament
+const willBeCompleted = computed(() => {
+  return form.finishPosition !== undefined && form.finishPosition !== null && form.finishPosition > 0;
+});
+
 function validate() {
   errors.name = '';
   errors.buyIn = '';
@@ -279,6 +299,12 @@ function handleSubmit() {
     return;
   }
 
+  // Determine the new status
+  let newStatus: SessionStatus = tournament.value?.status || 'completed';
+  if (isCurrentlyInProgress.value && willBeCompleted.value) {
+    newStatus = 'completed';
+  }
+
   tournamentsStore.updateTournament(tournamentId.value, {
     date: form.date,
     type: form.type,
@@ -295,6 +321,7 @@ function handleSubmit() {
     cashed: form.cashed,
     notes: form.notes || undefined,
     tags: form.tags,
+    status: newStatus,
   });
 
   router.push('/tournaments');

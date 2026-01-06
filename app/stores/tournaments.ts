@@ -132,6 +132,10 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     return Array.from(venues).sort();
   });
 
+  const inProgressTournaments = computed(() => {
+    return tournaments.value.filter(t => t.status === 'in_progress');
+  });
+
   // Actions
   async function initialize() {
     if (initialized.value) {
@@ -168,13 +172,23 @@ export const useTournamentsStore = defineStore('tournaments', () => {
   async function loadFromLocalStorage() {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      tournaments.value = JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      // Ensure all tournaments have a status (default to 'completed' for existing data)
+      tournaments.value = parsed.map((t: Tournament) => ({
+        ...t,
+        status: t.status || 'completed',
+      }));
     }
     else {
       // Load from mock data
       const response = await fetch('/data/tournaments.json');
       if (response.ok) {
-        tournaments.value = await response.json();
+        const data = await response.json();
+        // Ensure all tournaments have a status
+        tournaments.value = data.map((t: Tournament) => ({
+          ...t,
+          status: t.status || 'completed',
+        }));
         saveToStorage();
       }
     }
@@ -309,6 +323,7 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     // Getters
     filteredTournaments,
     sortedTournaments,
+    inProgressTournaments,
     stats,
     allBuyIns,
     allVenues,

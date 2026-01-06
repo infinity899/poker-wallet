@@ -142,6 +142,10 @@ export const useSessionsStore = defineStore('sessions', () => {
     return Array.from(venues).sort();
   });
 
+  const inProgressSessions = computed(() => {
+    return sessions.value.filter(s => s.status === 'in_progress');
+  });
+
   // Actions
   async function initialize() {
     if (initialized.value) {
@@ -178,13 +182,23 @@ export const useSessionsStore = defineStore('sessions', () => {
   async function loadFromLocalStorage() {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      sessions.value = JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      // Ensure all sessions have a status (default to 'completed' for existing data)
+      sessions.value = parsed.map((s: CashSession) => ({
+        ...s,
+        status: s.status || 'completed',
+      }));
     }
     else {
       // Load from mock data
       const response = await fetch('/data/sessions.json');
       if (response.ok) {
-        sessions.value = await response.json();
+        const data = await response.json();
+        // Ensure all sessions have a status
+        sessions.value = data.map((s: CashSession) => ({
+          ...s,
+          status: s.status || 'completed',
+        }));
         saveToStorage();
       }
     }
@@ -340,6 +354,21 @@ export const useSessionsStore = defineStore('sessions', () => {
       }
       if (updates.tags !== undefined) {
         dbUpdates.tags = updates.tags;
+      }
+      if (updates.status !== undefined) {
+        dbUpdates.status = updates.status;
+      }
+      if (updates.bankrollInitial !== undefined) {
+        dbUpdates.bankroll_initial = updates.bankrollInitial;
+      }
+      if (updates.bankrollFinal !== undefined) {
+        dbUpdates.bankroll_final = updates.bankrollFinal;
+      }
+      if (updates.buyInTotal !== undefined) {
+        dbUpdates.buy_in_total = updates.buyInTotal;
+      }
+      if (updates.cashOutTotal !== undefined) {
+        dbUpdates.cash_out_total = updates.cashOutTotal;
       }
 
       const { data: updated, error } = await supabase
@@ -508,6 +537,7 @@ export const useSessionsStore = defineStore('sessions', () => {
     // Getters
     filteredSessions,
     sortedSessions,
+    inProgressSessions,
     stats,
     allStakes,
     allVenues,

@@ -5,6 +5,7 @@
       :key="tournament.id"
       :to="`/tournaments/${tournament.id}`"
       class="card p-4 block hover:shadow-md dark:hover:shadow-gray-900/50 transition-shadow"
+      :class="tournament.status === 'in_progress' ? 'bg-amber-50/50 dark:bg-amber-900/10 border-l-2 border-amber-400' : ''"
     >
       <div class="flex justify-between items-start mb-2">
         <div>
@@ -17,17 +18,21 @@
         </div>
         <p
           class="text-lg font-bold"
-          :class="getTournamentProfit(tournament) >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
+          :class="tournament.status === 'in_progress'
+            ? 'text-gray-400 dark:text-gray-500'
+            : getTournamentProfit(tournament) >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
         >
-          {{ formatProfit(getTournamentProfit(tournament)) }}
+          {{ tournament.status === 'in_progress' ? 'In Progress' : formatProfit(getTournamentProfit(tournament)) }}
         </p>
       </div>
       <div class="flex gap-4 text-sm text-gray-500 dark:text-gray-400">
         <span>{{ tournament.type === 'live' ? tournament.venue : tournament.site }}</span>
-        <span v-if="tournament.finishPosition">{{ formatPosition(tournament.finishPosition) }}</span>
-        <span :class="tournament.cashed ? 'text-success-600 dark:text-success-400' : ''">
-          {{ tournament.cashed ? 'ITM' : 'Bust' }}
-        </span>
+        <template v-if="tournament.status !== 'in_progress'">
+          <span v-if="tournament.finishPosition">{{ formatPosition(tournament.finishPosition) }}</span>
+          <span :class="tournament.cashed ? 'text-success-600 dark:text-success-400' : ''">
+            {{ tournament.cashed ? 'ITM' : 'Bust' }}
+          </span>
+        </template>
       </div>
     </NuxtLink>
 
