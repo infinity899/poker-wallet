@@ -34,6 +34,12 @@ export default defineNuxtConfig({
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
       ],
+      script: [
+        // Contentsquare session recording (production only)
+        ...(process.env.NODE_ENV === 'production'
+          ? [{ src: 'https://t.contentsquare.net/uxa/3e0d4faaabb9a.js', async: true }]
+          : []),
+      ],
     },
   },
 
