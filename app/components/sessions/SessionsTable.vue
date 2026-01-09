@@ -42,7 +42,8 @@
             <!-- Main row -->
             <tr
               class="transition-colors"
-              :class="getRowClass(session)"
+              :class="[getRowClass(session), hasMultipleSites(session) ? 'cursor-pointer' : '']"
+              @click="hasMultipleSites(session) ? toggleExpand(session.id) : undefined"
             >
               <!-- Expand button -->
               <td class="px-4 py-3 whitespace-nowrap">
@@ -51,7 +52,7 @@
                   type="button"
                   class="p-1 hover:bg-surface-tertiary dark:hover:bg-surface-dark-tertiary rounded transition-colors"
                   :title="expandedRows.has(session.id) ? 'Collapse' : 'Expand site breakdown'"
-                  @click="toggleExpand(session.id)"
+                  @click.stop="toggleExpand(session.id)"
                 >
                   <ChevronDownIcon
                     class="w-4 h-4 text-foreground-muted dark:text-foreground-dark-muted transition-transform"
@@ -106,7 +107,7 @@
               >
                 {{ session.status === 'in_progress' ? '-' : formatProfit(session.result) }}
               </td>
-              <td class="px-4 py-3 whitespace-nowrap text-right text-sm">
+              <td class="px-4 py-3 whitespace-nowrap text-right text-sm" @click.stop>
                 <div class="flex gap-2 justify-end">
                   <NuxtLink
                     v-if="session.status === 'in_progress'"
