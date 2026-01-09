@@ -21,8 +21,6 @@ export interface CashSession {
   tableCount?: number; // for online multi-tabling
   buyInTotal?: number;
   cashOutTotal?: number;
-  bankrollInitial?: number;
-  bankrollFinal?: number;
   rakeFees?: number;
   notes?: string;
   tags: string[];

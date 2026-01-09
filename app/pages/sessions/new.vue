@@ -139,34 +139,6 @@
           </div>
         </div>
 
-        <!-- Bankroll Initial & Final (optional) -->
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="label">Bankroll Initial (optional)</label>
-            <input
-              v-model.number="form.bankrollInitial"
-              type="number"
-              step="1"
-              min="0"
-              placeholder="0"
-              class="input font-mono"
-              @input="calculateResult"
-            >
-          </div>
-          <div>
-            <label class="label">Bankroll Final (optional)</label>
-            <input
-              v-model.number="form.bankrollFinal"
-              type="number"
-              step="1"
-              min="0"
-              placeholder="0"
-              class="input font-mono"
-              @input="calculateResult"
-            >
-          </div>
-        </div>
-
         <!-- Result & Duration -->
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -261,8 +233,6 @@ const form = reactive({
   stake: '',
   cashIn: null as number | null,
   cashOut: null as number | null,
-  bankrollInitial: null as number | null,
-  bankrollFinal: null as number | null,
   result: 0,
   duration: 0,
   location: '',
@@ -271,28 +241,21 @@ const form = reactive({
   tags: [] as string[],
 });
 
-// Session is in-progress if no result is determined (no cash out and no bankroll final)
+// Session is in-progress if no result is determined (no cash out)
 const isInProgress = computed(() => {
   const hasCashOut = form.cashOut !== null && form.cashOut > 0;
-  const hasBankrollFinal = form.bankrollFinal !== null && form.bankrollFinal > 0;
-  const hasManualResult = form.result !== 0 && !hasCashOut && !hasBankrollFinal;
-  return !hasCashOut && !hasBankrollFinal && !hasManualResult;
+  const hasManualResult = form.result !== 0 && !hasCashOut;
+  return !hasCashOut && !hasManualResult;
 });
 
 const errors = reactive<Record<string, string>>({});
 
 const hasCalculatedResult = computed(() => {
-  const hasBankroll = form.bankrollInitial !== null && form.bankrollFinal !== null && form.bankrollInitial > 0;
-  const hasCashInOut = form.cashIn !== null && form.cashOut !== null && form.cashIn > 0;
-  return hasBankroll || hasCashInOut;
+  return form.cashIn !== null && form.cashOut !== null && form.cashIn > 0;
 });
 
 function calculateResult() {
-  // Bankroll takes priority over cash in/out
-  if (form.bankrollInitial !== null && form.bankrollFinal !== null && form.bankrollInitial > 0) {
-    form.result = form.bankrollFinal - form.bankrollInitial;
-  }
-  else if (form.cashIn !== null && form.cashOut !== null && form.cashIn > 0) {
+  if (form.cashIn !== null && form.cashOut !== null && form.cashIn > 0) {
     form.result = form.cashOut - form.cashIn;
   }
 }
@@ -336,8 +299,6 @@ function handleSubmit() {
     site: form.type === 'online' ? form.site : undefined,
     buyInTotal: form.cashIn ?? undefined,
     cashOutTotal: form.cashOut ?? undefined,
-    bankrollInitial: form.bankrollInitial ?? undefined,
-    bankrollFinal: form.bankrollFinal ?? undefined,
     notes: form.notes || undefined,
     tags: form.tags,
     status,

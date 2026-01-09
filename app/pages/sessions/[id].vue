@@ -18,7 +18,7 @@
         <!-- In Progress Banner -->
         <div v-if="isCurrentlyInProgress" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg p-3">
           <p class="text-sm text-amber-800 dark:text-amber-200">
-            This session is in progress. Add cash out/bankroll final and end time to complete it.
+            This session is in progress. Add cash out and end time to complete it.
           </p>
         </div>
 
@@ -155,34 +155,6 @@
           </div>
         </div>
 
-        <!-- Bankroll Initial & Final (optional) -->
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="label">Bankroll Initial (optional)</label>
-            <input
-              v-model.number="form.bankrollInitial"
-              type="number"
-              step="1"
-              min="0"
-              placeholder="0"
-              class="input font-mono"
-              @input="calculateResult"
-            >
-          </div>
-          <div>
-            <label class="label">Bankroll Final (optional)</label>
-            <input
-              v-model.number="form.bankrollFinal"
-              type="number"
-              step="1"
-              min="0"
-              placeholder="0"
-              class="input font-mono"
-              @input="calculateResult"
-            >
-          </div>
-        </div>
-
         <!-- Result & Duration -->
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -283,8 +255,6 @@ const form = reactive({
   stake: session.value?.stake || '',
   cashIn: session.value?.buyInTotal ?? null as number | null,
   cashOut: session.value?.cashOutTotal ?? null as number | null,
-  bankrollInitial: session.value?.bankrollInitial ?? null as number | null,
-  bankrollFinal: session.value?.bankrollFinal ?? null as number | null,
   result: session.value?.result || 0,
   duration: session.value?.duration || 0,
   location: session.value?.location || '',
@@ -303,9 +273,8 @@ const isCurrentlyInProgress = computed(() => {
 // Check if the form will result in a completed session
 const willBeCompleted = computed(() => {
   const hasCashOut = form.cashOut !== null && form.cashOut > 0;
-  const hasBankrollFinal = form.bankrollFinal !== null && form.bankrollFinal > 0;
-  const hasManualResult = form.result !== 0 && !hasCashOut && !hasBankrollFinal;
-  return hasCashOut || hasBankrollFinal || hasManualResult;
+  const hasManualResult = form.result !== 0 && !hasCashOut;
+  return hasCashOut || hasManualResult;
 });
 
 // Check if duration was auto-calculated from times
@@ -314,17 +283,11 @@ const hasCalculatedDuration = computed(() => {
 });
 
 const hasCalculatedResult = computed(() => {
-  const hasBankroll = form.bankrollInitial !== null && form.bankrollFinal !== null && form.bankrollInitial > 0;
-  const hasCashInOut = form.cashIn !== null && form.cashOut !== null && form.cashIn > 0;
-  return hasBankroll || hasCashInOut;
+  return form.cashIn !== null && form.cashOut !== null && form.cashIn > 0;
 });
 
 function calculateResult() {
-  // Bankroll takes priority over cash in/out
-  if (form.bankrollInitial !== null && form.bankrollFinal !== null && form.bankrollInitial > 0) {
-    form.result = form.bankrollFinal - form.bankrollInitial;
-  }
-  else if (form.cashIn !== null && form.cashOut !== null && form.cashIn > 0) {
+  if (form.cashIn !== null && form.cashOut !== null && form.cashIn > 0) {
     form.result = form.cashOut - form.cashIn;
   }
 }
@@ -378,8 +341,6 @@ function handleSubmit() {
     site: form.type === 'online' ? form.site : undefined,
     buyInTotal: form.cashIn ?? undefined,
     cashOutTotal: form.cashOut ?? undefined,
-    bankrollInitial: form.bankrollInitial ?? undefined,
-    bankrollFinal: form.bankrollFinal ?? undefined,
     notes: form.notes || undefined,
     tags: form.tags,
     status: newStatus,

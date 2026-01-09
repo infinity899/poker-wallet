@@ -23,6 +23,12 @@
               Duration
             </th>
             <th class="px-4 py-3 text-right text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider">
+              Cash In
+            </th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider">
+              Cash Out
+            </th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider">
               Result
             </th>
             <th class="px-4 py-3 text-right text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider">
@@ -35,9 +41,7 @@
             v-for="session in sessions"
             :key="session.id"
             class="transition-colors"
-            :class="session.status === 'in_progress'
-              ? 'bg-amber-50/50 dark:bg-amber-900/10 border-l-2 border-amber-400 hover:bg-amber-100/50 dark:hover:bg-amber-900/20'
-              : 'hover:bg-surface-secondary dark:hover:bg-surface-dark-tertiary'"
+            :class="getRowClass(session)"
           >
             <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground dark:text-foreground-dark">
               {{ formatDate(session.date) }}
@@ -63,6 +67,12 @@
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground-muted dark:text-foreground-dark-muted">
               {{ formatDuration(session.duration) }}
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-mono text-foreground-muted dark:text-foreground-dark-muted">
+              {{ session.buyInTotal ? formatCurrency(session.buyInTotal) : '-' }}
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-mono text-foreground-muted dark:text-foreground-dark-muted">
+              {{ session.cashOutTotal ? formatCurrency(session.cashOutTotal) : '-' }}
             </td>
             <td
               class="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold data-value"
@@ -117,7 +127,7 @@
 <script setup lang="ts">
 import type { CashSession } from '~/types';
 import { CheckIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
-import { formatDate, formatDuration, formatProfit } from '~/utils/formatters';
+import { formatCurrency, formatDate, formatDuration, formatProfit } from '~/utils/formatters';
 
 defineProps<{
   sessions: CashSession[];
@@ -126,4 +136,22 @@ defineProps<{
 const emit = defineEmits<{
   delete: [id: string];
 }>();
+
+function getRowClass(session: CashSession): string {
+  if (session.status === 'in_progress') {
+    return 'bg-amber-50/50 dark:bg-amber-900/10 border-l-2 border-amber-400 hover:bg-amber-100/50 dark:hover:bg-amber-900/20';
+  }
+
+  const hasCashData = session.buyInTotal && session.cashOutTotal;
+  if (hasCashData) {
+    if (session.cashOutTotal! > session.buyInTotal!) {
+      return 'bg-success-50/50 dark:bg-success-900/10 hover:bg-success-50 dark:hover:bg-success-900/20';
+    }
+    if (session.cashOutTotal! < session.buyInTotal!) {
+      return 'bg-danger-50/50 dark:bg-danger-900/10 hover:bg-danger-50 dark:hover:bg-danger-900/20';
+    }
+  }
+
+  return 'hover:bg-surface-secondary dark:hover:bg-surface-dark-tertiary';
+}
 </script>

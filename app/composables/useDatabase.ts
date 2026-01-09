@@ -21,8 +21,6 @@ export function dbSessionToSession(dbSession: DbSession): CashSession {
     tableCount: dbSession.table_count ?? undefined,
     buyInTotal: dbSession.buy_in_total ?? undefined,
     cashOutTotal: dbSession.cash_out_total ?? undefined,
-    bankrollInitial: dbSession.bankroll_initial ?? undefined,
-    bankrollFinal: dbSession.bankroll_final ?? undefined,
     rakeFees: dbSession.rake_fees ?? undefined,
     notes: dbSession.notes ?? undefined,
     tags: dbSession.tags || [],
@@ -52,8 +50,8 @@ export function sessionToDbSession(session: Omit<CashSession, 'id' | 'createdAt'
     table_count: session.tableCount ?? null,
     buy_in_total: session.buyInTotal ?? null,
     cash_out_total: session.cashOutTotal ?? null,
-    bankroll_initial: session.bankrollInitial ?? null,
-    bankroll_final: session.bankrollFinal ?? null,
+    bankroll_initial: null,
+    bankroll_final: null,
     rake_fees: session.rakeFees ?? null,
     notes: session.notes ?? null,
     tags: session.tags || [],
@@ -214,12 +212,6 @@ export function useDatabase() {
     }
     if (updates.rakeFees !== undefined) {
       dbUpdates.rake_fees = updates.rakeFees;
-    }
-    if (updates.bankrollInitial !== undefined) {
-      dbUpdates.bankroll_initial = updates.bankrollInitial;
-    }
-    if (updates.bankrollFinal !== undefined) {
-      dbUpdates.bankroll_final = updates.bankrollFinal;
     }
     if (updates.notes !== undefined) {
       dbUpdates.notes = updates.notes;

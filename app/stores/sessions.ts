@@ -358,12 +358,6 @@ export const useSessionsStore = defineStore('sessions', () => {
       if (updates.status !== undefined) {
         dbUpdates.status = updates.status;
       }
-      if (updates.bankrollInitial !== undefined) {
-        dbUpdates.bankroll_initial = updates.bankrollInitial;
-      }
-      if (updates.bankrollFinal !== undefined) {
-        dbUpdates.bankroll_final = updates.bankrollFinal;
-      }
       if (updates.buyInTotal !== undefined) {
         dbUpdates.buy_in_total = updates.buyInTotal;
       }
