@@ -25,6 +25,7 @@ export interface DbSession {
   rake_fees: number | null;
   notes: string | null;
   tags: string[];
+  sites: { name: string; cashIn?: number; cashOut?: number }[] | null;
   status: 'in_progress' | 'completed';
   created_at: string;
   updated_at: string;

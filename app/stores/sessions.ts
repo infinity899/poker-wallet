@@ -107,9 +107,38 @@ export const useSessionsStore = defineStore('sessions', () => {
   });
 
   const sortedSessions = computed(() => {
-    return [...filteredSessions.value].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-    );
+    return [...filteredSessions.value].sort((a, b) => {
+      // Combine date and startTime for sorting
+      const getDateTime = (session: CashSession): number => {
+        const dateStr = session.date;
+        const timeStr = session.startTime || '00:00';
+        // Parse time string (handles both "HH:mm" and "h:mm AM/PM" formats)
+        let hours = 0;
+        let minutes = 0;
+        if (timeStr.includes('AM') || timeStr.includes('PM')) {
+          const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+          if (match) {
+            hours = Number.parseInt(match[1]!, 10);
+            minutes = Number.parseInt(match[2]!, 10);
+            if (match[3]!.toUpperCase() === 'PM' && hours !== 12) {
+              hours += 12;
+            }
+            if (match[3]!.toUpperCase() === 'AM' && hours === 12) {
+              hours = 0;
+            }
+          }
+        }
+        else {
+          const [h, m] = timeStr.split(':');
+          hours = Number.parseInt(h || '0', 10);
+          minutes = Number.parseInt(m || '0', 10);
+        }
+        const date = new Date(dateStr);
+        date.setHours(hours, minutes, 0, 0);
+        return date.getTime();
+      };
+      return getDateTime(b) - getDateTime(a);
+    });
   });
 
   const stats = computed<SessionStats>(() => {
@@ -363,6 +392,9 @@ export const useSessionsStore = defineStore('sessions', () => {
       }
       if (updates.cashOutTotal !== undefined) {
         dbUpdates.cash_out_total = updates.cashOutTotal;
+      }
+      if (updates.sites !== undefined) {
+        dbUpdates.sites = updates.sites;
       }
 
       const { data: updated, error } = await supabase

@@ -86,72 +86,100 @@
           </div>
         </div>
 
-        <!-- Currency & Venue/Site -->
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="label">Currency</label>
-            <select v-model="form.currency" class="input">
-              <option v-for="currency in referenceStore.currencies" :key="currency" :value="currency">
-                {{ currency }}
-              </option>
-            </select>
-          </div>
-          <div>
-            <label class="label">
-              {{ form.type === 'live' ? 'Venue' : 'Site' }}
-            </label>
-            <select
-              v-if="form.type === 'live'"
-              v-model="form.location"
-              class="input"
-            >
-              <option value="">
-                Select venue
-              </option>
-              <option v-for="venue in venues" :key="venue.id" :value="venue.name">
-                {{ venue.name }}
-              </option>
-            </select>
-            <select
-              v-else
-              v-model="form.site"
-              class="input"
-            >
-              <option value="">
-                Select site
-              </option>
-              <option v-for="site in venues" :key="site.id" :value="site.name">
-                {{ site.name }}
-              </option>
-            </select>
-          </div>
+        <!-- Currency -->
+        <div>
+          <label class="label">Currency</label>
+          <select v-model="form.currency" class="input max-w-32">
+            <option v-for="currency in referenceStore.currencies" :key="currency" :value="currency">
+              {{ currency }}
+            </option>
+          </select>
         </div>
 
-        <!-- Cash In & Cash Out (optional) -->
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="label">Cash In (optional)</label>
-            <input
-              v-model.number="form.cashIn"
-              type="number"
-              step="1"
-              min="0"
-              placeholder="0"
-              class="input font-mono"
-              @input="calculateResult"
+        <!-- Sites/Venues with Cash In/Out -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="label mb-0">{{ form.type === 'live' ? 'Venues' : 'Sites' }}</label>
+            <button
+              type="button"
+              class="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center gap-1"
+              @click="addSiteEntry"
             >
+              <PlusIcon class="w-3.5 h-3.5" />
+              Add {{ form.type === 'live' ? 'Venue' : 'Site' }}
+            </button>
           </div>
-          <div>
-            <label class="label">Cash Out (optional)</label>
-            <input
-              v-model.number="form.cashOut"
-              type="number"
-              step="1"
-              min="0"
-              placeholder="0"
-              class="input font-mono"
-              @input="calculateResult"
+
+          <div class="space-y-2">
+            <div
+              v-for="(entry, index) in siteEntries"
+              :key="index"
+              class="grid grid-cols-[1fr,auto,auto,auto] gap-2 items-end"
             >
+              <div>
+                <label v-if="index === 0" class="label text-xs">{{ form.type === 'live' ? 'Venue' : 'Site' }}</label>
+                <select
+                  v-model="entry.name"
+                  class="input"
+                >
+                  <option value="">
+                    Select {{ form.type === 'live' ? 'venue' : 'site' }}
+                  </option>
+                  <option v-for="venue in venues" :key="venue.id" :value="venue.name">
+                    {{ venue.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="w-24">
+                <label v-if="index === 0" class="label text-xs">Cash In</label>
+                <input
+                  v-model.number="entry.cashIn"
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="0"
+                  class="input font-mono text-sm"
+                  @input="calculateResult"
+                >
+              </div>
+              <div class="w-24">
+                <label v-if="index === 0" class="label text-xs">Cash Out</label>
+                <input
+                  v-model.number="entry.cashOut"
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="0"
+                  class="input font-mono text-sm"
+                  @input="calculateResult"
+                >
+              </div>
+              <div class="w-8">
+                <label v-if="index === 0" class="label text-xs">&nbsp;</label>
+                <button
+                  v-if="siteEntries.length > 1"
+                  type="button"
+                  class="p-2 hover:bg-danger-50 dark:hover:bg-danger-900/30 rounded transition-colors"
+                  @click="removeSiteEntry(index)"
+                >
+                  <TrashIcon class="w-4 h-4 text-danger-500 dark:text-danger-400" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Totals row -->
+          <div v-if="siteEntries.length > 1" class="grid grid-cols-[1fr,auto,auto,auto] gap-2 items-center pt-2 border-t border-border-subtle dark:border-border-dark-subtle">
+            <div class="text-sm font-medium text-foreground-muted dark:text-foreground-dark-muted text-right pr-2">
+              Total
+            </div>
+            <div class="w-24 text-sm font-mono font-medium text-foreground dark:text-foreground-dark text-center">
+              {{ totalCashIn || '-' }}
+            </div>
+            <div class="w-24 text-sm font-mono font-medium text-foreground dark:text-foreground-dark text-center">
+              {{ totalCashOut || '-' }}
+            </div>
+            <div class="w-8" />
           </div>
         </div>
 
@@ -228,9 +256,15 @@
 </template>
 
 <script setup lang="ts">
-import type { Currency, GameType, SessionStatus, SessionType } from '~/types';
-import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
+import type { Currency, GameType, SessionStatus, SessionType, SiteEntry } from '~/types';
+import { ArrowLeftIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import { calculateDurationFromTimes } from '~/utils/calculations';
+
+interface FormSiteEntry {
+  name: string;
+  cashIn: number | null;
+  cashOut: number | null;
+}
 
 const sessionsStore = useSessionsStore();
 const referenceStore = useReferenceStore();
@@ -245,6 +279,31 @@ if (!session.value) {
   router.push('/sessions');
 }
 
+// Initialize site entries from existing session data
+function initSiteEntries(): FormSiteEntry[] {
+  const s = session.value;
+  if (!s) {
+    return [{ name: '', cashIn: null, cashOut: null }];
+  }
+
+  // If session has sites array, use it
+  if (s.sites && s.sites.length > 0) {
+    return s.sites.map(site => ({
+      name: site.name,
+      cashIn: site.cashIn ?? null,
+      cashOut: site.cashOut ?? null,
+    }));
+  }
+
+  // Otherwise, create single entry from primary site/location
+  const primaryName = s.type === 'live' ? (s.location || '') : (s.site || '');
+  return [{
+    name: primaryName,
+    cashIn: s.buyInTotal ?? null,
+    cashOut: s.cashOutTotal ?? null,
+  }];
+}
+
 const form = reactive({
   date: session.value?.date || '',
   startTime: session.value?.startTime || '',
@@ -253,14 +312,33 @@ const form = reactive({
   game: session.value?.game || 'NLH' as GameType,
   currency: session.value?.currency || 'USD' as Currency,
   stake: session.value?.stake || '',
-  cashIn: session.value?.buyInTotal ?? null as number | null,
-  cashOut: session.value?.cashOutTotal ?? null as number | null,
   result: session.value?.result || 0,
   duration: session.value?.duration || 0,
-  location: session.value?.location || '',
-  site: session.value?.site || '',
   notes: session.value?.notes || '',
   tags: session.value?.tags || [] as string[],
+});
+
+// Site entries with their cash in/out
+const siteEntries = ref<FormSiteEntry[]>(initSiteEntries());
+
+function addSiteEntry() {
+  siteEntries.value.push({ name: '', cashIn: null, cashOut: null });
+}
+
+function removeSiteEntry(index: number) {
+  if (siteEntries.value.length > 1) {
+    siteEntries.value.splice(index, 1);
+    calculateResult();
+  }
+}
+
+// Calculate totals from all site entries
+const totalCashIn = computed(() => {
+  return siteEntries.value.reduce((sum, entry) => sum + (entry.cashIn || 0), 0);
+});
+
+const totalCashOut = computed(() => {
+  return siteEntries.value.reduce((sum, entry) => sum + (entry.cashOut || 0), 0);
 });
 
 const errors = reactive<Record<string, string>>({});
@@ -272,7 +350,7 @@ const isCurrentlyInProgress = computed(() => {
 
 // Check if the form will result in a completed session
 const willBeCompleted = computed(() => {
-  const hasCashOut = form.cashOut !== null && form.cashOut > 0;
+  const hasCashOut = totalCashOut.value > 0;
   const hasManualResult = form.result !== 0 && !hasCashOut;
   return hasCashOut || hasManualResult;
 });
@@ -283,12 +361,12 @@ const hasCalculatedDuration = computed(() => {
 });
 
 const hasCalculatedResult = computed(() => {
-  return form.cashIn !== null && form.cashOut !== null && form.cashIn > 0;
+  return totalCashIn.value > 0 && totalCashOut.value > 0;
 });
 
 function calculateResult() {
-  if (form.cashIn !== null && form.cashOut !== null && form.cashIn > 0) {
-    form.result = form.cashOut - form.cashIn;
+  if (totalCashIn.value > 0 && totalCashOut.value > 0) {
+    form.result = totalCashOut.value - totalCashIn.value;
   }
 }
 
@@ -327,6 +405,19 @@ function handleSubmit() {
     newStatus = 'completed';
   }
 
+  // Get primary site/venue from first entry
+  const primaryEntry = siteEntries.value[0];
+  const primaryName = primaryEntry?.name || '';
+
+  // Build sites array with entries that have names
+  const sites: SiteEntry[] = siteEntries.value
+    .filter(entry => entry.name)
+    .map(entry => ({
+      name: entry.name,
+      cashIn: entry.cashIn ?? undefined,
+      cashOut: entry.cashOut ?? undefined,
+    }));
+
   sessionsStore.updateSession(sessionId.value, {
     date: form.date,
     startTime: form.startTime || undefined,
@@ -337,10 +428,11 @@ function handleSubmit() {
     stake: form.stake,
     result: form.result,
     duration: form.duration,
-    location: form.type === 'live' ? form.location : undefined,
-    site: form.type === 'online' ? form.site : undefined,
-    buyInTotal: form.cashIn ?? undefined,
-    cashOutTotal: form.cashOut ?? undefined,
+    location: form.type === 'live' ? primaryName : undefined,
+    site: form.type === 'online' ? primaryName : undefined,
+    sites: sites.length > 0 ? sites : undefined,
+    buyInTotal: totalCashIn.value > 0 ? totalCashIn.value : undefined,
+    cashOutTotal: totalCashOut.value > 0 ? totalCashOut.value : undefined,
     notes: form.notes || undefined,
     tags: form.tags,
     status: newStatus,

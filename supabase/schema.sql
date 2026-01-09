@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   rake_fees NUMERIC,
   notes TEXT,
   tags TEXT[] DEFAULT '{}',
+  sites JSONB DEFAULT NULL, -- Array of site entries: [{name: string, cashIn?: number, cashOut?: number}]
+  status TEXT DEFAULT 'completed' CHECK (status IN ('in_progress', 'completed')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -58,6 +60,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
   cashed BOOLEAN,
   notes TEXT,
   tags TEXT[] DEFAULT '{}',
+  status TEXT DEFAULT 'completed' CHECK (status IN ('in_progress', 'completed')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

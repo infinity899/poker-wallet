@@ -4,6 +4,7 @@
       <table class="min-w-full divide-y divide-border dark:divide-border-dark">
         <thead class="bg-surface-secondary dark:bg-surface-dark-tertiary">
           <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider w-8" />
             <th class="px-4 py-3 text-left text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider">
               Date
             </th>
@@ -37,78 +38,138 @@
           </tr>
         </thead>
         <tbody class="bg-surface dark:bg-surface-dark-secondary divide-y divide-border-subtle dark:divide-border-dark-subtle">
-          <tr
-            v-for="session in sessions"
-            :key="session.id"
-            class="transition-colors"
-            :class="getRowClass(session)"
-          >
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground dark:text-foreground-dark">
-              {{ formatDate(session.date) }}
-            </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm">
-              <span
-                class="badge"
-                :class="session.type === 'live'
-                  ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-                  : 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'"
-              >
-                {{ session.type }}
-              </span>
-            </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground dark:text-foreground-dark">
-              {{ session.game }}
-            </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground dark:text-foreground-dark font-mono">
-              {{ session.stake }}
-            </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground-muted dark:text-foreground-dark-muted">
-              {{ session.type === 'live' ? session.location : session.site }}
-            </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground-muted dark:text-foreground-dark-muted">
-              {{ formatDuration(session.duration) }}
-            </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-mono text-foreground-muted dark:text-foreground-dark-muted">
-              {{ session.buyInTotal ? formatCurrency(session.buyInTotal) : '-' }}
-            </td>
-            <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-mono text-foreground-muted dark:text-foreground-dark-muted">
-              {{ session.cashOutTotal ? formatCurrency(session.cashOutTotal) : '-' }}
-            </td>
-            <td
-              class="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold data-value"
-              :class="session.status === 'in_progress'
-                ? 'text-foreground-muted dark:text-foreground-dark-muted'
-                : session.result >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
+          <template v-for="session in sessions" :key="session.id">
+            <!-- Main row -->
+            <tr
+              class="transition-colors"
+              :class="getRowClass(session)"
             >
-              {{ session.status === 'in_progress' ? '-' : formatProfit(session.result) }}
-            </td>
-            <td class="px-4 py-3 whitespace-nowrap text-right text-sm">
-              <div class="flex gap-2 justify-end">
-                <NuxtLink
-                  v-if="session.status === 'in_progress'"
-                  :to="`/sessions/${session.id}`"
-                  class="p-1 hover:bg-success-50 dark:hover:bg-success-900/30 rounded transition-colors"
-                  title="Complete session"
-                >
-                  <CheckIcon class="w-4 h-4 text-success-600 dark:text-success-400" />
-                </NuxtLink>
-                <NuxtLink
-                  :to="`/sessions/${session.id}`"
-                  class="p-1 hover:bg-surface-tertiary dark:hover:bg-surface-dark-tertiary rounded transition-colors"
-                  title="Edit session"
-                >
-                  <PencilIcon class="w-4 h-4 text-foreground-muted dark:text-foreground-dark-muted" />
-                </NuxtLink>
+              <!-- Expand button -->
+              <td class="px-4 py-3 whitespace-nowrap">
                 <button
-                  class="p-1 hover:bg-danger-50 dark:hover:bg-danger-900/30 rounded transition-colors"
-                  title="Delete session"
-                  @click.prevent="emit('delete', session.id)"
+                  v-if="hasMultipleSites(session)"
+                  type="button"
+                  class="p-1 hover:bg-surface-tertiary dark:hover:bg-surface-dark-tertiary rounded transition-colors"
+                  :title="expandedRows.has(session.id) ? 'Collapse' : 'Expand site breakdown'"
+                  @click="toggleExpand(session.id)"
                 >
-                  <TrashIcon class="w-4 h-4 text-danger-500 dark:text-danger-400" />
+                  <ChevronDownIcon
+                    class="w-4 h-4 text-foreground-muted dark:text-foreground-dark-muted transition-transform"
+                    :class="{ 'rotate-180': expandedRows.has(session.id) }"
+                  />
                 </button>
-              </div>
-            </td>
-          </tr>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground dark:text-foreground-dark">
+                {{ formatDate(session.date) }}
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm">
+                <span
+                  class="badge"
+                  :class="session.type === 'live'
+                    ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                    : 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'"
+                >
+                  {{ session.type }}
+                </span>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground dark:text-foreground-dark">
+                {{ session.game }}
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground dark:text-foreground-dark font-mono">
+                {{ session.stake }}
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground-muted dark:text-foreground-dark-muted">
+                <span v-if="getSiteCount(session) > 1" class="flex items-center gap-1">
+                  {{ getSiteCount(session) }} {{ session.type === 'live' ? 'venues' : 'sites' }}
+                </span>
+                <span v-else-if="getSiteCount(session) === 1">
+                  {{ session.sites![0]!.name || (session.type === 'live' ? session.location : session.site) }}
+                </span>
+                <span v-else>
+                  {{ session.type === 'live' ? session.location : session.site }}
+                </span>
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground-muted dark:text-foreground-dark-muted">
+                {{ formatDuration(session.duration) }}
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-mono text-foreground-muted dark:text-foreground-dark-muted">
+                {{ session.buyInTotal ? formatCurrency(session.buyInTotal) : '-' }}
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-mono text-foreground-muted dark:text-foreground-dark-muted">
+                {{ session.cashOutTotal ? formatCurrency(session.cashOutTotal) : '-' }}
+              </td>
+              <td
+                class="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold data-value"
+                :class="session.status === 'in_progress'
+                  ? 'text-foreground-muted dark:text-foreground-dark-muted'
+                  : session.result >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
+              >
+                {{ session.status === 'in_progress' ? '-' : formatProfit(session.result) }}
+              </td>
+              <td class="px-4 py-3 whitespace-nowrap text-right text-sm">
+                <div class="flex gap-2 justify-end">
+                  <NuxtLink
+                    v-if="session.status === 'in_progress'"
+                    :to="`/sessions/${session.id}`"
+                    class="p-1 hover:bg-success-50 dark:hover:bg-success-900/30 rounded transition-colors"
+                    title="Complete session"
+                  >
+                    <CheckIcon class="w-4 h-4 text-success-600 dark:text-success-400" />
+                  </NuxtLink>
+                  <NuxtLink
+                    :to="`/sessions/${session.id}`"
+                    class="p-1 hover:bg-surface-tertiary dark:hover:bg-surface-dark-tertiary rounded transition-colors"
+                    title="Edit session"
+                  >
+                    <PencilIcon class="w-4 h-4 text-foreground-muted dark:text-foreground-dark-muted" />
+                  </NuxtLink>
+                  <button
+                    class="p-1 hover:bg-danger-50 dark:hover:bg-danger-900/30 rounded transition-colors"
+                    title="Delete session"
+                    @click.prevent="emit('delete', session.id)"
+                  >
+                    <TrashIcon class="w-4 h-4 text-danger-500 dark:text-danger-400" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Expanded detail row -->
+            <tr
+              v-if="expandedRows.has(session.id) && session.sites"
+              class="bg-surface-secondary/50 dark:bg-surface-dark-tertiary/50"
+            >
+              <td colspan="11" class="px-4 py-3">
+                <div class="ml-8 space-y-1">
+                  <div class="text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider mb-2">
+                    Site Breakdown
+                  </div>
+                  <div
+                    v-for="(site, index) in session.sites"
+                    :key="index"
+                    class="grid grid-cols-[1fr,auto,auto,auto] gap-4 py-1.5 text-sm"
+                    :class="{ 'border-t border-border-subtle dark:border-border-dark-subtle': index > 0 }"
+                  >
+                    <div class="text-foreground dark:text-foreground-dark">
+                      {{ site.name || 'Unknown' }}
+                    </div>
+                    <div class="w-24 text-right font-mono text-foreground-muted dark:text-foreground-dark-muted">
+                      {{ site.cashIn ? formatCurrency(site.cashIn) : '-' }}
+                    </div>
+                    <div class="w-24 text-right font-mono text-foreground-muted dark:text-foreground-dark-muted">
+                      {{ site.cashOut ? formatCurrency(site.cashOut) : '-' }}
+                    </div>
+                    <div
+                      class="w-24 text-right font-mono font-medium"
+                      :class="getSiteProfit(site) >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
+                    >
+                      {{ site.cashIn && site.cashOut ? formatProfit(getSiteProfit(site)) : '-' }}
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
@@ -125,8 +186,8 @@
 </template>
 
 <script setup lang="ts">
-import type { CashSession } from '~/types';
-import { CheckIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
+import type { CashSession, SiteEntry } from '~/types';
+import { CheckIcon, ChevronDownIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import { formatCurrency, formatDate, formatDuration, formatProfit } from '~/utils/formatters';
 
 defineProps<{
@@ -136,6 +197,32 @@ defineProps<{
 const emit = defineEmits<{
   delete: [id: string];
 }>();
+
+// Track expanded rows
+const expandedRows = ref<Set<string>>(new Set());
+
+function toggleExpand(sessionId: string) {
+  if (expandedRows.value.has(sessionId)) {
+    expandedRows.value.delete(sessionId);
+  }
+  else {
+    expandedRows.value.add(sessionId);
+  }
+  // Trigger reactivity
+  expandedRows.value = new Set(expandedRows.value);
+}
+
+function hasMultipleSites(session: CashSession): boolean {
+  return !!session.sites && session.sites.length > 1;
+}
+
+function getSiteCount(session: CashSession): number {
+  return session.sites?.length || 0;
+}
+
+function getSiteProfit(site: SiteEntry): number {
+  return (site.cashOut || 0) - (site.cashIn || 0);
+}
 
 function getRowClass(session: CashSession): string {
   if (session.status === 'in_progress') {

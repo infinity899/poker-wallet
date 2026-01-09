@@ -24,6 +24,7 @@ export function dbSessionToSession(dbSession: DbSession): CashSession {
     rakeFees: dbSession.rake_fees ?? undefined,
     notes: dbSession.notes ?? undefined,
     tags: dbSession.tags || [],
+    sites: dbSession.sites ?? undefined,
     status: dbSession.status || 'completed',
     createdAt: dbSession.created_at,
     updatedAt: dbSession.updated_at,
@@ -55,6 +56,7 @@ export function sessionToDbSession(session: Omit<CashSession, 'id' | 'createdAt'
     rake_fees: session.rakeFees ?? null,
     notes: session.notes ?? null,
     tags: session.tags || [],
+    sites: session.sites ?? null,
     status: session.status || 'completed',
   };
 }
@@ -221,6 +223,9 @@ export function useDatabase() {
     }
     if (updates.status !== undefined) {
       dbUpdates.status = updates.status;
+    }
+    if (updates.sites !== undefined) {
+      dbUpdates.sites = updates.sites;
     }
 
     const { data, error } = await supabase

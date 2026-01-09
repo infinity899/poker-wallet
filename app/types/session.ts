@@ -3,6 +3,12 @@ export type GameType = 'NLH' | 'PLO' | 'PLO5' | 'Mixed';
 export type Currency = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'RON';
 export type SessionStatus = 'in_progress' | 'completed';
 
+export interface SiteEntry {
+  name: string; // site or venue name
+  cashIn?: number;
+  cashOut?: number;
+}
+
 export interface CashSession {
   id: string;
   date: string; // ISO format YYYY-MM-DD
@@ -16,8 +22,9 @@ export interface CashSession {
   game: GameType;
   result: number; // profit/loss (signed)
   duration: number; // minutes
-  location?: string; // for live sessions
-  site?: string; // for online sessions
+  location?: string; // for live sessions (primary venue)
+  site?: string; // for online sessions (primary site)
+  sites?: SiteEntry[]; // additional sites/venues with individual cash in/out
   tableCount?: number; // for online multi-tabling
   buyInTotal?: number;
   cashOutTotal?: number;
