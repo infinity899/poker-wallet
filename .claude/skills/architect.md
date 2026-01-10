@@ -80,6 +80,7 @@ components/
 ## Anti-Patterns to Avoid
 
 ```typescript
+/* eslint-disable ts/no-unused-vars */
 // ❌ Direct localStorage in component
 localStorage.setItem('key', JSON.stringify(data));
 
@@ -87,16 +88,17 @@ localStorage.setItem('key', JSON.stringify(data));
 sessionsStore.save(session);
 
 // ❌ Demo mode check scattered everywhere
-if (isDemoMode) { /* ... */ } else { /* ... */ }
+if (isDemoMode) { /* ... */ }
+else { /* ... */ }
 
 // ✅ Adapter handles this
 adapter.save(entity); // Adapter knows the mode
 
 // ❌ Business logic in component
-const profit = sessions.reduce((sum, s) => sum + s.result, 0);
+const badProfit = sessions.reduce((sum, s) => sum + s.result, 0);
 
 // ✅ Computed in store
-const profit = computed(() => sessionsStore.stats.totalProfit);
+const goodProfit = computed(() => sessionsStore.stats.totalProfit);
 
 // ❌ Untyped API responses
 const { data } = await supabase.from('sessions').select();

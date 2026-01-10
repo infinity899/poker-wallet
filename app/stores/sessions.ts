@@ -1,13 +1,13 @@
-import type { CashSession, DbSession, NewCashSession, SessionFilters, SessionStats } from '~/types';
+import type { LocalStorageAdapter } from '~/adapters/LocalStorageAdapter';
+import type { StorageAdapter } from '~/adapters/types';
+import type { CashSession, NewCashSession, Result, SessionFilters, SessionStats } from '~/types';
 import { defineStore } from 'pinia';
-import { dbSessionToSession, sessionToDbSession } from '~/composables/useDatabase';
+import { createSessionAdapter } from '~/adapters/sessionAdapter';
 import { isDateInRange } from '~/composables/useFilters';
 import { useTypedSupabaseClient } from '~/composables/useTypedSupabase';
 import { DEFAULT_SESSION_FILTERS } from '~/types';
 import { calculateSessionStats } from '~/utils/calculations';
 import { parseStake } from '~/utils/formatters';
-
-const STORAGE_KEY = 'poker-wallet-sessions';
 
 export const useSessionsStore = defineStore('sessions', () => {
   const supabase = useTypedSupabaseClient();
@@ -18,12 +18,22 @@ export const useSessionsStore = defineStore('sessions', () => {
   const loading = ref(false);
   const initialized = ref(false);
   const filters = ref<SessionFilters>({ ...DEFAULT_SESSION_FILTERS });
+  const error = ref<string | null>(null);
 
   // Get auth store (lazy to avoid circular dependency)
   const getAuthStore = () => useAuthStore();
 
   // Check if we're in demo mode
   const isDemoMode = computed(() => getAuthStore().isDemoMode);
+
+  // Get the appropriate adapter based on mode
+  function getAdapter(): StorageAdapter<CashSession> {
+    return createSessionAdapter(
+      isDemoMode.value,
+      supabase,
+      user.value?.sub,
+    );
+  }
 
   // Getters
   const filteredSessions = computed(() => {
@@ -176,31 +186,31 @@ export const useSessionsStore = defineStore('sessions', () => {
   });
 
   // Actions
-  async function initialize() {
+  async function initialize(): Promise<void> {
     if (initialized.value) {
       return;
     }
 
     loading.value = true;
+    error.value = null;
+
     try {
-      // Wait for auth store to load user settings before checking isDemoMode
       const authStore = getAuthStore();
       await authStore.waitForSettings();
 
-      // Now isDemoMode will have the correct value
-      const demoMode = authStore.isDemoMode;
+      const adapter = getAdapter();
+      const data = await adapter.getAll();
 
-      if (demoMode) {
-        // Demo mode: load from localStorage or mock data
-        await loadFromLocalStorage();
-      }
-      else {
-        // Database mode: load from Supabase
-        await loadFromDatabase();
-      }
+      // Ensure all sessions have a status (default to 'completed' for existing data)
+      sessions.value = data.map(s => ({
+        ...s,
+        status: s.status || 'completed',
+      }));
     }
-    catch (error) {
-      console.error('Failed to initialize sessions:', error);
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to load sessions';
+      error.value = message;
+      console.error('Failed to initialize sessions:', e);
     }
     finally {
       loading.value = false;
@@ -208,348 +218,174 @@ export const useSessionsStore = defineStore('sessions', () => {
     }
   }
 
-  async function loadFromLocalStorage() {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      // Ensure all sessions have a status (default to 'completed' for existing data)
-      sessions.value = parsed.map((s: CashSession) => ({
-        ...s,
-        status: s.status || 'completed',
-      }));
-    }
-    else {
-      // Load from mock data
-      const response = await fetch('/data/sessions.json');
-      if (response.ok) {
-        const data = await response.json();
-        // Ensure all sessions have a status
-        sessions.value = data.map((s: CashSession) => ({
-          ...s,
-          status: s.status || 'completed',
-        }));
-        saveToStorage();
-      }
-    }
-  }
-
-  async function loadFromDatabase() {
-    if (!user.value) {
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('user_id', user.value!.sub)
-      .order('date', { ascending: false });
-
-    if (error) {
-      console.error('Failed to load sessions from database:', error);
-      return;
-    }
-
-    sessions.value = (data || []).map((row: DbSession) => dbSessionToSession(row));
-  }
-
-  // Reload data (useful when switching modes)
-  async function reload() {
+  async function reload(): Promise<void> {
     initialized.value = false;
     sessions.value = [];
+    error.value = null;
     await initialize();
   }
 
-  function saveToStorage() {
-    if (isDemoMode.value) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions.value));
-    }
-  }
+  async function addSession(data: NewCashSession): Promise<Result<CashSession>> {
+    try {
+      const parsed = parseStake(data.stake);
+      const adapter = getAdapter();
 
-  async function addSession(data: NewCashSession): Promise<CashSession> {
-    const now = new Date().toISOString();
-    const parsed = parseStake(data.stake);
-
-    if (isDemoMode.value) {
-      // Demo mode: save to localStorage
-      const session: CashSession = {
+      const sessionData = {
         ...data,
-        id: crypto.randomUUID(),
         smallBlind: parsed?.smallBlind ?? 0,
         bigBlind: parsed?.bigBlind ?? 0,
-        createdAt: now,
-        updatedAt: now,
       };
 
+      const session = await adapter.create(sessionData);
       sessions.value.push(session);
-      saveToStorage();
-      return session;
+
+      return { success: true, data: session };
     }
-    else {
-      // Database mode: save to Supabase
-      if (!user.value) {
-        throw new Error('User not authenticated');
-      }
-
-      const dbSession = sessionToDbSession({
-        ...data,
-        smallBlind: parsed?.smallBlind ?? 0,
-        bigBlind: parsed?.bigBlind ?? 0,
-      }, user.value!.sub);
-
-      const { data: inserted, error } = await supabase
-        .from('sessions')
-        .insert(dbSession as any)
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      const session = dbSessionToSession(inserted as DbSession);
-      sessions.value.push(session);
-      return session;
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to add session';
+      return { success: false, error: new Error(message) };
     }
   }
 
-  async function updateSession(id: string, updates: Partial<Omit<CashSession, 'id'>>): Promise<boolean> {
-    const index = sessions.value.findIndex(s => s.id === id);
-    if (index === -1) {
-      return false;
-    }
+  async function updateSession(id: string, updates: Partial<Omit<CashSession, 'id'>>): Promise<Result<CashSession>> {
+    try {
+      const index = sessions.value.findIndex(s => s.id === id);
+      if (index === -1) {
+        return { success: false, error: new Error('Session not found') };
+      }
 
-    const current = sessions.value[index]!;
-    const parsed = updates.stake ? parseStake(updates.stake) : null;
+      const parsed = updates.stake ? parseStake(updates.stake) : null;
+      const adapter = getAdapter();
 
-    if (isDemoMode.value) {
-      // Demo mode: update localStorage
-      sessions.value[index] = {
-        ...current,
+      const updateData = {
         ...updates,
-        id: current.id,
         ...(parsed && { smallBlind: parsed.smallBlind, bigBlind: parsed.bigBlind }),
-        updatedAt: new Date().toISOString(),
       };
 
-      saveToStorage();
-      return true;
+      const updated = await adapter.update(id, updateData);
+      sessions.value[index] = updated;
+
+      return { success: true, data: updated };
     }
-    else {
-      // Database mode: update Supabase
-      if (!user.value) {
-        throw new Error('User not authenticated');
-      }
-
-      const dbUpdates: Record<string, any> = {};
-      if (updates.date !== undefined) {
-        dbUpdates.date = updates.date;
-      }
-      if (updates.startTime !== undefined) {
-        dbUpdates.start_time = updates.startTime;
-      }
-      if (updates.endTime !== undefined) {
-        dbUpdates.end_time = updates.endTime;
-      }
-      if (updates.type !== undefined) {
-        dbUpdates.type = updates.type;
-      }
-      if (updates.currency !== undefined) {
-        dbUpdates.currency = updates.currency;
-      }
-      if (updates.stake !== undefined) {
-        dbUpdates.stake = updates.stake;
-      }
-      if (parsed) {
-        dbUpdates.small_blind = parsed.smallBlind;
-        dbUpdates.big_blind = parsed.bigBlind;
-      }
-      if (updates.game !== undefined) {
-        dbUpdates.game = updates.game;
-      }
-      if (updates.result !== undefined) {
-        dbUpdates.result = updates.result;
-      }
-      if (updates.duration !== undefined) {
-        dbUpdates.duration = updates.duration;
-      }
-      if (updates.location !== undefined) {
-        dbUpdates.location = updates.location;
-      }
-      if (updates.site !== undefined) {
-        dbUpdates.site = updates.site;
-      }
-      if (updates.notes !== undefined) {
-        dbUpdates.notes = updates.notes;
-      }
-      if (updates.tags !== undefined) {
-        dbUpdates.tags = updates.tags;
-      }
-      if (updates.status !== undefined) {
-        dbUpdates.status = updates.status;
-      }
-      if (updates.buyInTotal !== undefined) {
-        dbUpdates.buy_in_total = updates.buyInTotal;
-      }
-      if (updates.cashOutTotal !== undefined) {
-        dbUpdates.cash_out_total = updates.cashOutTotal;
-      }
-      if (updates.sites !== undefined) {
-        dbUpdates.sites = updates.sites;
-      }
-
-      const { data: updated, error } = await supabase
-        .from('sessions')
-        .update(dbUpdates as any)
-        .eq('id', id)
-        .eq('user_id', user.value!.sub)
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      sessions.value[index] = dbSessionToSession(updated as DbSession);
-      return true;
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to update session';
+      return { success: false, error: new Error(message) };
     }
   }
 
-  async function deleteSession(id: string): Promise<boolean> {
-    const index = sessions.value.findIndex(s => s.id === id);
-    if (index === -1) {
-      return false;
-    }
-
-    if (isDemoMode.value) {
-      // Demo mode: delete from localStorage
-      sessions.value.splice(index, 1);
-      saveToStorage();
-      return true;
-    }
-    else {
-      // Database mode: delete from Supabase
-      if (!user.value) {
-        throw new Error('User not authenticated');
+  async function deleteSession(id: string): Promise<Result<void>> {
+    try {
+      const index = sessions.value.findIndex(s => s.id === id);
+      if (index === -1) {
+        return { success: false, error: new Error('Session not found') };
       }
 
-      const { error } = await supabase
-        .from('sessions')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.value!.sub);
-
-      if (error) {
-        throw error;
-      }
-
+      const adapter = getAdapter();
+      await adapter.delete(id);
       sessions.value.splice(index, 1);
-      return true;
+
+      return { success: true, data: undefined };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to delete session';
+      return { success: false, error: new Error(message) };
     }
   }
 
-  async function deleteSessions(ids: string[]): Promise<number> {
-    const initialLength = sessions.value.length;
+  async function deleteSessions(ids: string[]): Promise<Result<number>> {
+    try {
+      const adapter = getAdapter();
+      await adapter.deleteMany(ids);
 
-    if (isDemoMode.value) {
+      const initialLength = sessions.value.length;
       sessions.value = sessions.value.filter(s => !ids.includes(s.id));
-      saveToStorage();
+      const deletedCount = initialLength - sessions.value.length;
+
+      return { success: true, data: deletedCount };
     }
-    else {
-      if (!user.value) {
-        throw new Error('User not authenticated');
-      }
-
-      const { error } = await supabase
-        .from('sessions')
-        .delete()
-        .in('id', ids)
-        .eq('user_id', user.value!.sub);
-
-      if (error) {
-        throw error;
-      }
-
-      sessions.value = sessions.value.filter(s => !ids.includes(s.id));
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to delete sessions';
+      return { success: false, error: new Error(message) };
     }
-
-    return initialLength - sessions.value.length;
   }
 
   function getSessionById(id: string): CashSession | undefined {
     return sessions.value.find(s => s.id === id);
   }
 
-  function setFilters(newFilters: Partial<SessionFilters>) {
+  function setFilters(newFilters: Partial<SessionFilters>): void {
     filters.value = { ...filters.value, ...newFilters };
   }
 
-  function resetFilters() {
+  function resetFilters(): void {
     filters.value = { ...DEFAULT_SESSION_FILTERS };
   }
 
-  async function importSessions(importedSessions: CashSession[], replace: boolean = false) {
-    if (isDemoMode.value) {
-      if (replace) {
-        sessions.value = importedSessions;
-      }
-      else {
-        const existingIds = new Set(sessions.value.map(s => s.id));
-        const newSessions = importedSessions.filter(s => !existingIds.has(s.id));
-        sessions.value.push(...newSessions);
-      }
-      saveToStorage();
-    }
-    else {
-      // For database mode, insert each session
-      if (!user.value) {
-        throw new Error('User not authenticated');
-      }
+  async function importSessions(importedSessions: CashSession[], replace: boolean = false): Promise<Result<void>> {
+    try {
+      if (isDemoMode.value) {
+        const adapter = getAdapter() as LocalStorageAdapter<CashSession>;
 
-      if (replace) {
-        // Delete all existing sessions first
-        await supabase
-          .from('sessions')
-          .delete()
-          .eq('user_id', user.value!.sub);
-        sessions.value = [];
-      }
-
-      // Insert new sessions
-      for (const session of importedSessions) {
-        const dbSession = sessionToDbSession(session, user.value!.sub);
-        const { data, error } = await supabase
-          .from('sessions')
-          .insert(dbSession as any)
-          .select()
-          .single();
-
-        if (!error && data) {
-          sessions.value.push(dbSessionToSession(data as DbSession));
+        if (replace) {
+          adapter.importData(importedSessions);
+          sessions.value = importedSessions;
+        }
+        else {
+          await adapter.mergeData(importedSessions);
+          const existingIds = new Set(sessions.value.map(s => s.id));
+          const newSessions = importedSessions.filter(s => !existingIds.has(s.id));
+          sessions.value.push(...newSessions);
         }
       }
+      else {
+        // For database mode, use adapter for each session
+        const adapter = getAdapter();
+
+        if (replace) {
+          // Delete all existing sessions first
+          const ids = sessions.value.map(s => s.id);
+          if (ids.length > 0) {
+            await adapter.deleteMany(ids);
+          }
+          sessions.value = [];
+        }
+
+        // Insert new sessions
+        for (const session of importedSessions) {
+          const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...sessionData } = session;
+          const created = await adapter.create(sessionData);
+          sessions.value.push(created);
+        }
+      }
+
+      return { success: true, data: undefined };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to import sessions';
+      return { success: false, error: new Error(message) };
     }
   }
 
-  async function clearAll() {
-    if (isDemoMode.value) {
+  async function clearAll(): Promise<Result<void>> {
+    try {
+      if (isDemoMode.value) {
+        const adapter = getAdapter() as LocalStorageAdapter<CashSession>;
+        adapter.clearAll();
+      }
+      else {
+        const adapter = getAdapter();
+        const ids = sessions.value.map(s => s.id);
+        if (ids.length > 0) {
+          await adapter.deleteMany(ids);
+        }
+      }
+
       sessions.value = [];
-      saveToStorage();
+      return { success: true, data: undefined };
     }
-    else {
-      if (!user.value) {
-        throw new Error('User not authenticated');
-      }
-
-      const { error } = await supabase
-        .from('sessions')
-        .delete()
-        .eq('user_id', user.value!.sub);
-
-      if (error) {
-        throw error;
-      }
-
-      sessions.value = [];
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to clear sessions';
+      return { success: false, error: new Error(message) };
     }
   }
 
@@ -559,6 +395,7 @@ export const useSessionsStore = defineStore('sessions', () => {
     loading: readonly(loading),
     initialized: readonly(initialized),
     filters,
+    error: readonly(error),
 
     // Getters
     filteredSessions,

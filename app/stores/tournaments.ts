@@ -1,12 +1,12 @@
-import type { DbTournament, NewTournament, Tournament, TournamentFilters, TournamentStats } from '~/types';
+import type { LocalStorageAdapter } from '~/adapters/LocalStorageAdapter';
+import type { StorageAdapter } from '~/adapters/types';
+import type { NewTournament, Result, Tournament, TournamentFilters, TournamentStats } from '~/types';
 import { defineStore } from 'pinia';
-import { dbTournamentToTournament } from '~/composables/useDatabase';
+import { createTournamentAdapter } from '~/adapters/tournamentAdapter';
 import { isDateInRange } from '~/composables/useFilters';
 import { useTypedSupabaseClient } from '~/composables/useTypedSupabase';
 import { DEFAULT_TOURNAMENT_FILTERS } from '~/types';
 import { calculateTournamentStats } from '~/utils/calculations';
-
-const STORAGE_KEY = 'poker-wallet-tournaments';
 
 export const useTournamentsStore = defineStore('tournaments', () => {
   const supabase = useTypedSupabaseClient();
@@ -17,12 +17,22 @@ export const useTournamentsStore = defineStore('tournaments', () => {
   const loading = ref(false);
   const initialized = ref(false);
   const filters = ref<TournamentFilters>({ ...DEFAULT_TOURNAMENT_FILTERS });
+  const error = ref<string | null>(null);
 
   // Get auth store (lazy to avoid circular dependency)
   const getAuthStore = () => useAuthStore();
 
   // Check if we're in demo mode
   const isDemoMode = computed(() => getAuthStore().isDemoMode);
+
+  // Get the appropriate adapter based on mode
+  function getAdapter(): StorageAdapter<Tournament> {
+    return createTournamentAdapter(
+      isDemoMode.value,
+      supabase,
+      user.value?.sub,
+    );
+  }
 
   // Getters
   const filteredTournaments = computed(() => {
@@ -137,31 +147,31 @@ export const useTournamentsStore = defineStore('tournaments', () => {
   });
 
   // Actions
-  async function initialize() {
+  async function initialize(): Promise<void> {
     if (initialized.value) {
       return;
     }
 
     loading.value = true;
+    error.value = null;
+
     try {
-      // Wait for auth store to load user settings before checking isDemoMode
       const authStore = getAuthStore();
       await authStore.waitForSettings();
 
-      // Now isDemoMode will have the correct value
-      const demoMode = authStore.isDemoMode;
+      const adapter = getAdapter();
+      const data = await adapter.getAll();
 
-      if (demoMode) {
-        // Demo mode: load from localStorage or mock data
-        await loadFromLocalStorage();
-      }
-      else {
-        // Database mode: load from Supabase
-        await loadFromDatabase();
-      }
+      // Ensure all tournaments have a status (default to 'completed' for existing data)
+      tournaments.value = data.map(t => ({
+        ...t,
+        status: t.status || 'completed',
+      }));
     }
-    catch (error) {
-      console.error('Failed to initialize tournaments:', error);
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to load tournaments';
+      error.value = message;
+      console.error('Failed to initialize tournaments:', e);
     }
     finally {
       loading.value = false;
@@ -169,142 +179,157 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     }
   }
 
-  async function loadFromLocalStorage() {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      // Ensure all tournaments have a status (default to 'completed' for existing data)
-      tournaments.value = parsed.map((t: Tournament) => ({
-        ...t,
-        status: t.status || 'completed',
-      }));
-    }
-    else {
-      // Load from mock data
-      const response = await fetch('/data/tournaments.json');
-      if (response.ok) {
-        const data = await response.json();
-        // Ensure all tournaments have a status
-        tournaments.value = data.map((t: Tournament) => ({
-          ...t,
-          status: t.status || 'completed',
-        }));
-        saveToStorage();
-      }
-    }
-  }
-
-  async function loadFromDatabase() {
-    if (!user.value) {
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('tournaments')
-      .select('*')
-      .eq('user_id', user.value!.sub)
-      .order('date', { ascending: false });
-
-    if (error) {
-      console.error('Failed to load tournaments from database:', error);
-      return;
-    }
-
-    tournaments.value = (data || []).map((row: DbTournament) => dbTournamentToTournament(row));
-  }
-
-  // Reload data (useful when switching modes)
-  async function reload() {
+  async function reload(): Promise<void> {
     initialized.value = false;
     tournaments.value = [];
+    error.value = null;
     await initialize();
   }
 
-  function saveToStorage() {
-    if (isDemoMode.value) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tournaments.value));
+  async function addTournament(data: NewTournament): Promise<Result<Tournament>> {
+    try {
+      const adapter = getAdapter();
+      const tournament = await adapter.create(data);
+      tournaments.value.push(tournament);
+
+      return { success: true, data: tournament };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to add tournament';
+      return { success: false, error: new Error(message) };
     }
   }
 
-  function addTournament(data: NewTournament): Tournament {
-    const now = new Date().toISOString();
+  async function updateTournament(id: string, updates: Partial<Omit<Tournament, 'id'>>): Promise<Result<Tournament>> {
+    try {
+      const index = tournaments.value.findIndex(t => t.id === id);
+      if (index === -1) {
+        return { success: false, error: new Error('Tournament not found') };
+      }
 
-    const tournament: Tournament = {
-      ...data,
-      id: crypto.randomUUID(),
-      createdAt: now,
-      updatedAt: now,
-    };
+      const adapter = getAdapter();
+      const updated = await adapter.update(id, updates);
+      tournaments.value[index] = updated;
 
-    tournaments.value.push(tournament);
-    saveToStorage();
-    return tournament;
-  }
-
-  function updateTournament(id: string, updates: Partial<Omit<Tournament, 'id'>>): boolean {
-    const index = tournaments.value.findIndex(t => t.id === id);
-    if (index === -1) {
-      return false;
+      return { success: true, data: updated };
     }
-
-    const current = tournaments.value[index]!;
-
-    tournaments.value[index] = {
-      ...current,
-      ...updates,
-      id: current.id,
-      updatedAt: new Date().toISOString(),
-    };
-
-    saveToStorage();
-    return true;
-  }
-
-  function deleteTournament(id: string): boolean {
-    const index = tournaments.value.findIndex(t => t.id === id);
-    if (index === -1) {
-      return false;
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to update tournament';
+      return { success: false, error: new Error(message) };
     }
-
-    tournaments.value.splice(index, 1);
-    saveToStorage();
-    return true;
   }
 
-  function deleteTournaments(ids: string[]): number {
-    const initialLength = tournaments.value.length;
-    tournaments.value = tournaments.value.filter(t => !ids.includes(t.id));
-    saveToStorage();
-    return initialLength - tournaments.value.length;
+  async function deleteTournament(id: string): Promise<Result<void>> {
+    try {
+      const index = tournaments.value.findIndex(t => t.id === id);
+      if (index === -1) {
+        return { success: false, error: new Error('Tournament not found') };
+      }
+
+      const adapter = getAdapter();
+      await adapter.delete(id);
+      tournaments.value.splice(index, 1);
+
+      return { success: true, data: undefined };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to delete tournament';
+      return { success: false, error: new Error(message) };
+    }
+  }
+
+  async function deleteTournaments(ids: string[]): Promise<Result<number>> {
+    try {
+      const adapter = getAdapter();
+      await adapter.deleteMany(ids);
+
+      const initialLength = tournaments.value.length;
+      tournaments.value = tournaments.value.filter(t => !ids.includes(t.id));
+      const deletedCount = initialLength - tournaments.value.length;
+
+      return { success: true, data: deletedCount };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to delete tournaments';
+      return { success: false, error: new Error(message) };
+    }
   }
 
   function getTournamentById(id: string): Tournament | undefined {
     return tournaments.value.find(t => t.id === id);
   }
 
-  function setFilters(newFilters: Partial<TournamentFilters>) {
+  function setFilters(newFilters: Partial<TournamentFilters>): void {
     filters.value = { ...filters.value, ...newFilters };
   }
 
-  function resetFilters() {
+  function resetFilters(): void {
     filters.value = { ...DEFAULT_TOURNAMENT_FILTERS };
   }
 
-  function importTournaments(importedTournaments: Tournament[], replace: boolean = false) {
-    if (replace) {
-      tournaments.value = importedTournaments;
+  async function importTournaments(importedTournaments: Tournament[], replace: boolean = false): Promise<Result<void>> {
+    try {
+      if (isDemoMode.value) {
+        const adapter = getAdapter() as LocalStorageAdapter<Tournament>;
+
+        if (replace) {
+          adapter.importData(importedTournaments);
+          tournaments.value = importedTournaments;
+        }
+        else {
+          await adapter.mergeData(importedTournaments);
+          const existingIds = new Set(tournaments.value.map(t => t.id));
+          const newTournaments = importedTournaments.filter(t => !existingIds.has(t.id));
+          tournaments.value.push(...newTournaments);
+        }
+      }
+      else {
+        const adapter = getAdapter();
+
+        if (replace) {
+          const ids = tournaments.value.map(t => t.id);
+          if (ids.length > 0) {
+            await adapter.deleteMany(ids);
+          }
+          tournaments.value = [];
+        }
+
+        for (const tournament of importedTournaments) {
+          const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...tournamentData } = tournament;
+          const created = await adapter.create(tournamentData);
+          tournaments.value.push(created);
+        }
+      }
+
+      return { success: true, data: undefined };
     }
-    else {
-      const existingIds = new Set(tournaments.value.map(t => t.id));
-      const newTournaments = importedTournaments.filter(t => !existingIds.has(t.id));
-      tournaments.value.push(...newTournaments);
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to import tournaments';
+      return { success: false, error: new Error(message) };
     }
-    saveToStorage();
   }
 
-  function clearAll() {
-    tournaments.value = [];
-    saveToStorage();
+  async function clearAll(): Promise<Result<void>> {
+    try {
+      if (isDemoMode.value) {
+        const adapter = getAdapter() as LocalStorageAdapter<Tournament>;
+        adapter.clearAll();
+      }
+      else {
+        const adapter = getAdapter();
+        const ids = tournaments.value.map(t => t.id);
+        if (ids.length > 0) {
+          await adapter.deleteMany(ids);
+        }
+      }
+
+      tournaments.value = [];
+      return { success: true, data: undefined };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to clear tournaments';
+      return { success: false, error: new Error(message) };
+    }
   }
 
   // Helper to calculate profit for a tournament
@@ -319,6 +344,7 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     loading: readonly(loading),
     initialized: readonly(initialized),
     filters,
+    error: readonly(error),
 
     // Getters
     filteredTournaments,

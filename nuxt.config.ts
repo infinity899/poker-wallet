@@ -36,6 +36,7 @@ export default defineNuxtConfig({
       ],
       script: [
         // Contentsquare session recording (production only)
+        // eslint-disable-next-line node/prefer-global/process
         ...(process.env.NODE_ENV === 'production'
           ? [{ src: 'https://t.contentsquare.net/uxa/3e0d4faaabb9a.js', async: true }]
           : []),

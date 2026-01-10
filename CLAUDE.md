@@ -30,6 +30,14 @@ npx vue-tsc --noEmit # TypeScript check
 
 ```
 app/
+├── adapters/                  # Storage adapters (Adapter Pattern)
+│   ├── types.ts               # StorageAdapter interface
+│   ├── LocalStorageAdapter.ts # Demo mode adapter
+│   ├── SupabaseAdapter.ts     # Production mode adapter
+│   ├── sessionAdapter.ts      # Session factory + field mapping
+│   ├── tournamentAdapter.ts   # Tournament factory + field mapping
+│   ├── horseAdapter.ts        # Horse/transaction factories
+│   └── index.ts               # Barrel exports
 ├── assets/css/tailwind.css    # Tailwind entry with custom styles
 ├── components/
 │   ├── analytics/             # Charts and analytics UI
@@ -37,16 +45,17 @@ app/
 │   ├── layout/                # AppSidebar, AppHeader, AppBottomNav, AppFAB
 │   ├── sessions/              # Session list, table, forms
 │   ├── settings/              # Settings sections
+│   ├── shared/                # Shared components (ToastContainer)
 │   └── tournaments/           # Tournament list, table, forms
-├── composables/               # useBreakpoint, useFilters, useCurrency, useExport
-├── layouts/default.vue        # Main layout (sidebar + bottom nav)
+├── composables/               # useBreakpoint, useFilters, useCurrency, useExport, useToast
+├── layouts/default.vue        # Main layout (sidebar + bottom nav + ToastContainer)
 ├── pages/                     # File-based routing
 ├── plugins/
 │   ├── stores.client.ts       # Initialize stores on app load
 │   └── theme.client.ts        # Dark mode initialization
-├── stores/                    # Pinia stores
-├── types/                     # TypeScript interfaces
-└── utils/                     # calculations, formatters, validators
+├── stores/                    # Pinia stores (use adapters + Result type)
+├── types/                     # TypeScript interfaces (includes Result type)
+└── utils/                     # calculations, formatters, validators, caseMapping
 public/data/                   # Mock JSON: sessions.json, tournaments.json, reference.json
 ```
 
@@ -109,15 +118,24 @@ interface Tournament {
 
 ## Pinia Stores
 
+All data stores use the Adapter Pattern and return `Result<T>` from actions.
+
 ### useSessionsStore
-- `sessions`: All cash sessions
-- `filteredSessions`: Sessions matching current filters
-- `sortedSessions`: Filtered sessions sorted by date desc
-- `stats`: Computed SessionStats
-- Actions: `initialize()`, `addSession()`, `updateSession()`, `deleteSession()`
+- **State**: `sessions`, `loading`, `initialized`, `filters`, `error`
+- **Getters**: `filteredSessions`, `sortedSessions`, `inProgressSessions`, `stats`
+- **Actions** (all return `Promise<Result<T>>`):
+  - `initialize()`, `reload()`
+  - `addSession()`, `updateSession()`, `deleteSession()`, `deleteSessions()`
+  - `importSessions()`, `clearAll()`
 
 ### useTournamentsStore
 - Same pattern as sessions store
+- Additional: `inProgressTournaments` getter
+
+### useHorsesStore
+- Manages both horses and horse transactions
+- **State**: `horses`, `transactions`, `loading`, `initialized`, `error`
+- **Getters**: `sortedHorses`, `allHorsesStats`, `getHorseStats()`, `getCumulativeProfitData()`
 
 ### useReferenceStore
 - `venues`: Live venues list
@@ -128,12 +146,91 @@ interface Tournament {
 - `isDark`: Current theme state
 - `toggle()`: Switch theme
 
+### useAuthStore
+- `isDemoMode`: Computed based on user settings
+- `waitForSettings()`: Promise for other stores to await initialization
+
 ## Data Persistence
 
 1. On app load: `stores.client.ts` plugin initializes all stores
-2. Stores check localStorage first, fallback to `public/data/*.json`
-3. All mutations auto-save to localStorage
-4. Export/Import available in Settings for JSON backup
+2. Stores use adapters to abstract storage (localStorage vs Supabase)
+3. Demo mode uses `LocalStorageAdapter` with seed data from `public/data/*.json`
+4. Authenticated mode uses `SupabaseAdapter` for database persistence
+5. Export/Import available in Settings for JSON backup
+
+## Architecture Patterns
+
+### Adapter Pattern
+
+Storage is abstracted through adapters in `app/adapters/`:
+
+```typescript
+// StorageAdapter interface (types.ts)
+interface StorageAdapter<T extends { id: string }> {
+  getAll(): Promise<T[]>;
+  getById(id: string): Promise<T | null>;
+  create(item: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<T>;
+  update(id: string, updates: Partial<T>): Promise<T>;
+  delete(id: string): Promise<void>;
+  deleteMany(ids: string[]): Promise<void>;
+}
+
+// Factory function creates appropriate adapter
+function createSessionAdapter(isDemoMode: boolean, supabase?, userId?) {
+  if (isDemoMode) {
+    return new LocalStorageAdapter<CashSession>(STORAGE_KEY, SEED_DATA_PATH);
+  }
+  return new SupabaseAdapter<CashSession, DbSession>(...);
+}
+```
+
+Adapters available:
+- `LocalStorageAdapter` - Demo mode, persists to browser localStorage
+- `SupabaseAdapter` - Production mode, persists to Supabase database
+
+### Result Type Pattern
+
+All store actions return `Result<T>` for consistent error handling:
+
+```typescript
+type Result<T, E = Error> =
+  | { success: true; data: T }
+  | { success: false; error: E };
+
+// Usage in stores
+async function addSession(data: NewCashSession): Promise<Result<CashSession>> {
+  try {
+    const adapter = getAdapter();
+    const session = await adapter.create(data);
+    sessions.value.push(session);
+    return { success: true, data: session };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Failed to add session';
+    return { success: false, error: new Error(message) };
+  }
+}
+
+// Usage in components
+const result = await store.addSession(data);
+if (result.success) {
+  toast.success('Session added');
+} else {
+  toast.error(result.error.message);
+}
+```
+
+### Toast Notifications
+
+Global toast system via `useToast()` composable:
+
+```typescript
+const toast = useToast();
+toast.success('Session saved');
+toast.error('Failed to delete');
+toast.info('Processing...');
+```
+
+`ToastContainer` component is mounted in `layouts/default.vue`.
 
 ## Responsive Breakpoints
 

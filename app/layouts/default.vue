@@ -41,6 +41,9 @@
       @close="showTournamentSessionModal = false"
       @save="handleSaveTournamentSession"
     />
+
+    <!-- Toast Notifications -->
+    <SharedToastContainer />
   </div>
 </template>
 

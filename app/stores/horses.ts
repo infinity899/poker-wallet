@@ -1,9 +1,9 @@
-import type { Horse, HorseStats, HorseTransaction, NewHorse, NewHorseTransaction } from '~/types';
+import type { LocalStorageAdapter } from '~/adapters/LocalStorageAdapter';
+import type { StorageAdapter } from '~/adapters/types';
+import type { Horse, HorseStats, HorseTransaction, NewHorse, NewHorseTransaction, Result } from '~/types';
 import { defineStore } from 'pinia';
+import { createHorseAdapter, createHorseTransactionAdapter } from '~/adapters/horseAdapter';
 import { useTypedSupabaseClient } from '~/composables/useTypedSupabase';
-
-const STORAGE_KEY_HORSES = 'poker-wallet-horses';
-const STORAGE_KEY_TRANSACTIONS = 'poker-wallet-horse-transactions';
 
 export const useHorsesStore = defineStore('horses', () => {
   const supabase = useTypedSupabaseClient();
@@ -14,12 +14,22 @@ export const useHorsesStore = defineStore('horses', () => {
   const transactions = ref<HorseTransaction[]>([]);
   const loading = ref(false);
   const initialized = ref(false);
+  const error = ref<string | null>(null);
 
   // Get auth store (lazy to avoid circular dependency)
   const getAuthStore = () => useAuthStore();
 
   // Check if we're in demo mode
   const isDemoMode = computed(() => getAuthStore().isDemoMode);
+
+  // Get adapters
+  function getHorseAdapter(): StorageAdapter<Horse> {
+    return createHorseAdapter(isDemoMode.value, supabase, user.value?.sub);
+  }
+
+  function getTransactionAdapter(): StorageAdapter<HorseTransaction> {
+    return createHorseTransactionAdapter(isDemoMode.value, supabase, user.value?.sub);
+  }
 
   // Getters
   const sortedHorses = computed(() => {
@@ -102,31 +112,34 @@ export const useHorsesStore = defineStore('horses', () => {
   }
 
   // Actions
-  async function initialize() {
+  async function initialize(): Promise<void> {
     if (initialized.value) {
       return;
     }
 
     loading.value = true;
+    error.value = null;
+
     try {
-      // Wait for auth store to load user settings before checking isDemoMode
       const authStore = getAuthStore();
       await authStore.waitForSettings();
 
-      // Now isDemoMode will have the correct value
-      const demoMode = authStore.isDemoMode;
+      const horseAdapter = getHorseAdapter();
+      const transactionAdapter = getTransactionAdapter();
 
-      if (demoMode) {
-        // Demo mode: load from localStorage or mock data
-        await loadFromLocalStorage();
-      }
-      else {
-        // Database mode: load from Supabase
-        await loadFromDatabase();
-      }
+      // Load both in parallel
+      const [horsesData, transactionsData] = await Promise.all([
+        horseAdapter.getAll(),
+        transactionAdapter.getAll(),
+      ]);
+
+      horses.value = horsesData;
+      transactions.value = transactionsData;
     }
-    catch (error) {
-      console.error('Failed to initialize horses:', error);
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to load horses data';
+      error.value = message;
+      console.error('Failed to initialize horses:', e);
     }
     finally {
       loading.value = false;
@@ -134,262 +147,77 @@ export const useHorsesStore = defineStore('horses', () => {
     }
   }
 
-  async function loadFromLocalStorage() {
-    const storedHorses = localStorage.getItem(STORAGE_KEY_HORSES);
-    const storedTransactions = localStorage.getItem(STORAGE_KEY_TRANSACTIONS);
-
-    let loadedFromStorage = false;
-    if (storedHorses && storedTransactions) {
-      const parsedHorses = JSON.parse(storedHorses);
-      const parsedTransactions = JSON.parse(storedTransactions);
-      // Only use localStorage if there's actual data
-      if (parsedHorses.length > 0 || parsedTransactions.length > 0) {
-        horses.value = parsedHorses;
-        transactions.value = parsedTransactions;
-        loadedFromStorage = true;
-      }
-    }
-
-    if (!loadedFromStorage) {
-      // Load from mock data
-      const response = await fetch('/data/horses.json');
-      if (response.ok) {
-        const data = await response.json();
-        horses.value = data.horses || [];
-        transactions.value = data.transactions || [];
-        saveToStorage();
-      }
-    }
-  }
-
-  async function loadFromDatabase() {
-    if (!user.value) {
-      return;
-    }
-
-    // Load horses
-    const { data: horsesData, error: horsesError } = await supabase
-      .from('horses')
-      .select('*')
-      .eq('user_id', user.value!.sub)
-      .order('created_at', { ascending: false });
-
-    if (horsesError) {
-      console.error('Failed to load horses from database:', horsesError);
-      return;
-    }
-
-    // Load horse transactions
-    const { data: transactionsData, error: transactionsError } = await supabase
-      .from('horse_transactions')
-      .select('*')
-      .eq('user_id', user.value!.sub)
-      .order('date', { ascending: false });
-
-    if (transactionsError) {
-      console.error('Failed to load horse transactions from database:', transactionsError);
-      return;
-    }
-
-    // Map database records to frontend types
-    horses.value = (horsesData || []).map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      avatar: row.avatar ?? undefined,
-      currency: row.currency,
-      notes: row.notes ?? undefined,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }));
-
-    transactions.value = (transactionsData || []).map((row: any) => ({
-      id: row.id,
-      horseId: row.horse_id,
-      date: row.date,
-      type: row.type,
-      result: row.result,
-      description: row.description ?? undefined,
-      isSession: row.is_session ?? undefined,
-      sessionCount: row.session_count ?? undefined,
-      createdAt: row.created_at,
-    }));
-  }
-
-  // Reload data (useful when switching modes)
-  async function reload() {
+  async function reload(): Promise<void> {
     initialized.value = false;
     horses.value = [];
     transactions.value = [];
+    error.value = null;
     await initialize();
   }
 
-  function saveToStorage() {
-    if (isDemoMode.value) {
-      localStorage.setItem(STORAGE_KEY_HORSES, JSON.stringify(horses.value));
-      localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(transactions.value));
-    }
-  }
-
   // Horse CRUD
-  async function addHorse(data: NewHorse): Promise<Horse> {
-    const now = new Date().toISOString();
-
-    if (isDemoMode.value) {
-      // Demo mode: save to localStorage
-      const horse: Horse = {
-        ...data,
-        id: crypto.randomUUID(),
-        createdAt: now,
-        updatedAt: now,
-      };
-
+  async function addHorse(data: NewHorse): Promise<Result<Horse>> {
+    try {
+      const adapter = getHorseAdapter();
+      const horse = await adapter.create(data);
       horses.value.push(horse);
-      saveToStorage();
-      return horse;
+
+      return { success: true, data: horse };
     }
-    else {
-      // Database mode: save to Supabase
-      if (!user.value) {
-        throw new Error('User not authenticated');
-      }
-
-      const { data: inserted, error } = await supabase
-        .from('horses')
-        .insert({
-          user_id: user.value!.sub,
-          name: data.name,
-          avatar: data.avatar ?? null,
-          currency: data.currency,
-          notes: data.notes ?? null,
-        } as any)
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      const horse: Horse = {
-        id: inserted.id,
-        name: inserted.name,
-        avatar: inserted.avatar ?? undefined,
-        currency: inserted.currency,
-        notes: inserted.notes ?? undefined,
-        createdAt: inserted.created_at,
-        updatedAt: inserted.updated_at,
-      };
-
-      horses.value.push(horse);
-      return horse;
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to add horse';
+      return { success: false, error: new Error(message) };
     }
   }
 
-  async function updateHorse(id: string, updates: Partial<Omit<Horse, 'id'>>): Promise<boolean> {
-    const index = horses.value.findIndex(h => h.id === id);
-    if (index === -1) {
-      return false;
+  async function updateHorse(id: string, updates: Partial<Omit<Horse, 'id'>>): Promise<Result<Horse>> {
+    try {
+      const index = horses.value.findIndex(h => h.id === id);
+      if (index === -1) {
+        return { success: false, error: new Error('Horse not found') };
+      }
+
+      const adapter = getHorseAdapter();
+      const updated = await adapter.update(id, updates);
+      horses.value[index] = updated;
+
+      return { success: true, data: updated };
     }
-
-    const current = horses.value[index]!;
-
-    if (isDemoMode.value) {
-      // Demo mode: update localStorage
-      horses.value[index] = {
-        ...current,
-        ...updates,
-        id: current.id,
-        updatedAt: new Date().toISOString(),
-      };
-
-      saveToStorage();
-      return true;
-    }
-    else {
-      // Database mode: update Supabase
-      if (!user.value) {
-        throw new Error('User not authenticated');
-      }
-
-      const dbUpdates: Record<string, any> = {};
-      if (updates.name !== undefined) {
-        dbUpdates.name = updates.name;
-      }
-      if (updates.avatar !== undefined) {
-        dbUpdates.avatar = updates.avatar;
-      }
-      if (updates.currency !== undefined) {
-        dbUpdates.currency = updates.currency;
-      }
-      if (updates.notes !== undefined) {
-        dbUpdates.notes = updates.notes;
-      }
-
-      const { data: updated, error } = await supabase
-        .from('horses')
-        .update(dbUpdates as any)
-        .eq('id', id)
-        .eq('user_id', user.value!.sub)
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      horses.value[index] = {
-        id: updated.id,
-        name: updated.name,
-        avatar: updated.avatar ?? undefined,
-        currency: updated.currency,
-        notes: updated.notes ?? undefined,
-        createdAt: updated.created_at,
-        updatedAt: updated.updated_at,
-      };
-
-      return true;
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to update horse';
+      return { success: false, error: new Error(message) };
     }
   }
 
-  async function deleteHorse(id: string): Promise<boolean> {
-    const index = horses.value.findIndex(h => h.id === id);
-    if (index === -1) {
-      return false;
-    }
-
-    if (isDemoMode.value) {
-      // Demo mode: delete from localStorage
-      horses.value.splice(index, 1);
-      transactions.value = transactions.value.filter(t => t.horseId !== id);
-      saveToStorage();
-      return true;
-    }
-    else {
-      // Database mode: delete from Supabase
-      if (!user.value) {
-        throw new Error('User not authenticated');
+  async function deleteHorse(id: string): Promise<Result<void>> {
+    try {
+      const index = horses.value.findIndex(h => h.id === id);
+      if (index === -1) {
+        return { success: false, error: new Error('Horse not found') };
       }
 
       // Delete all transactions for this horse first
-      await supabase
-        .from('horse_transactions')
-        .delete()
-        .eq('horse_id', id)
-        .eq('user_id', user.value!.sub);
+      const horseTransactionIds = transactions.value
+        .filter(t => t.horseId === id)
+        .map(t => t.id);
+
+      if (horseTransactionIds.length > 0) {
+        const transactionAdapter = getTransactionAdapter();
+        await transactionAdapter.deleteMany(horseTransactionIds);
+      }
 
       // Delete the horse
-      const { error } = await supabase
-        .from('horses')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.value!.sub);
-
-      if (error) {
-        throw error;
-      }
+      const horseAdapter = getHorseAdapter();
+      await horseAdapter.delete(id);
 
       horses.value.splice(index, 1);
       transactions.value = transactions.value.filter(t => t.horseId !== id);
-      return true;
+
+      return { success: true, data: undefined };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to delete horse';
+      return { success: false, error: new Error(message) };
     }
   }
 
@@ -398,169 +226,55 @@ export const useHorsesStore = defineStore('horses', () => {
   }
 
   // Transaction CRUD
-  async function addTransaction(data: NewHorseTransaction): Promise<HorseTransaction> {
-    const now = new Date().toISOString();
-
-    if (isDemoMode.value) {
-      // Demo mode: save to localStorage
-      const transaction: HorseTransaction = {
-        ...data,
-        id: crypto.randomUUID(),
-        createdAt: now,
-      };
-
+  async function addTransaction(data: NewHorseTransaction): Promise<Result<HorseTransaction>> {
+    try {
+      const adapter = getTransactionAdapter();
+      const transaction = await adapter.create(data);
       transactions.value.push(transaction);
-      saveToStorage();
-      return transaction;
+
+      return { success: true, data: transaction };
     }
-    else {
-      // Database mode: save to Supabase
-      if (!user.value) {
-        throw new Error('User not authenticated');
-      }
-
-      const { data: inserted, error } = await supabase
-        .from('horse_transactions')
-        .insert({
-          user_id: user.value!.sub,
-          horse_id: data.horseId,
-          date: data.date,
-          type: data.type,
-          result: data.result,
-          description: data.description ?? null,
-          is_session: data.isSession ?? null,
-          session_count: data.sessionCount ?? null,
-        } as any)
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      const transaction: HorseTransaction = {
-        id: inserted.id,
-        horseId: inserted.horse_id,
-        date: inserted.date,
-        type: inserted.type,
-        result: inserted.result,
-        description: inserted.description ?? undefined,
-        isSession: inserted.is_session ?? undefined,
-        sessionCount: inserted.session_count ?? undefined,
-        createdAt: inserted.created_at,
-      };
-
-      transactions.value.push(transaction);
-      return transaction;
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to add transaction';
+      return { success: false, error: new Error(message) };
     }
   }
 
-  async function updateTransaction(id: string, updates: Partial<Omit<HorseTransaction, 'id'>>): Promise<boolean> {
-    const index = transactions.value.findIndex(t => t.id === id);
-    if (index === -1) {
-      return false;
+  async function updateTransaction(id: string, updates: Partial<Omit<HorseTransaction, 'id'>>): Promise<Result<HorseTransaction>> {
+    try {
+      const index = transactions.value.findIndex(t => t.id === id);
+      if (index === -1) {
+        return { success: false, error: new Error('Transaction not found') };
+      }
+
+      const adapter = getTransactionAdapter();
+      const updated = await adapter.update(id, updates);
+      transactions.value[index] = updated;
+
+      return { success: true, data: updated };
     }
-
-    const current = transactions.value[index]!;
-
-    if (isDemoMode.value) {
-      // Demo mode: update localStorage
-      transactions.value[index] = {
-        ...current,
-        ...updates,
-        id: current.id,
-      };
-
-      saveToStorage();
-      return true;
-    }
-    else {
-      // Database mode: update Supabase
-      if (!user.value) {
-        throw new Error('User not authenticated');
-      }
-
-      const dbUpdates: Record<string, any> = {};
-      if (updates.horseId !== undefined) {
-        dbUpdates.horse_id = updates.horseId;
-      }
-      if (updates.date !== undefined) {
-        dbUpdates.date = updates.date;
-      }
-      if (updates.type !== undefined) {
-        dbUpdates.type = updates.type;
-      }
-      if (updates.result !== undefined) {
-        dbUpdates.result = updates.result;
-      }
-      if (updates.description !== undefined) {
-        dbUpdates.description = updates.description;
-      }
-      if (updates.isSession !== undefined) {
-        dbUpdates.is_session = updates.isSession;
-      }
-      if (updates.sessionCount !== undefined) {
-        dbUpdates.session_count = updates.sessionCount;
-      }
-
-      const { data: updated, error } = await supabase
-        .from('horse_transactions')
-        .update(dbUpdates as any)
-        .eq('id', id)
-        .eq('user_id', user.value!.sub)
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      transactions.value[index] = {
-        id: updated.id,
-        horseId: updated.horse_id,
-        date: updated.date,
-        type: updated.type,
-        result: updated.result,
-        description: updated.description ?? undefined,
-        isSession: updated.is_session ?? undefined,
-        sessionCount: updated.session_count ?? undefined,
-        createdAt: updated.created_at,
-      };
-
-      return true;
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to update transaction';
+      return { success: false, error: new Error(message) };
     }
   }
 
-  async function deleteTransaction(id: string): Promise<boolean> {
-    const index = transactions.value.findIndex(t => t.id === id);
-    if (index === -1) {
-      return false;
-    }
-
-    if (isDemoMode.value) {
-      // Demo mode: delete from localStorage
-      transactions.value.splice(index, 1);
-      saveToStorage();
-      return true;
-    }
-    else {
-      // Database mode: delete from Supabase
-      if (!user.value) {
-        throw new Error('User not authenticated');
+  async function deleteTransaction(id: string): Promise<Result<void>> {
+    try {
+      const index = transactions.value.findIndex(t => t.id === id);
+      if (index === -1) {
+        return { success: false, error: new Error('Transaction not found') };
       }
 
-      const { error } = await supabase
-        .from('horse_transactions')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.value!.sub);
-
-      if (error) {
-        throw error;
-      }
-
+      const adapter = getTransactionAdapter();
+      await adapter.delete(id);
       transactions.value.splice(index, 1);
-      return true;
+
+      return { success: true, data: undefined };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to delete transaction';
+      return { success: false, error: new Error(message) };
     }
   }
 
@@ -569,50 +283,106 @@ export const useHorsesStore = defineStore('horses', () => {
   }
 
   // Import/Export
-  function importData(data: { horses: Horse[]; transactions: HorseTransaction[] }, replace: boolean = false) {
-    if (replace) {
-      horses.value = data.horses;
-      transactions.value = data.transactions;
-    }
-    else {
-      // Merge: add items that don't exist
-      const existingHorseIds = new Set(horses.value.map(h => h.id));
-      const existingTransactionIds = new Set(transactions.value.map(t => t.id));
+  async function importData(
+    data: { horses: Horse[]; transactions: HorseTransaction[] },
+    replace: boolean = false,
+  ): Promise<Result<void>> {
+    try {
+      if (isDemoMode.value) {
+        if (replace) {
+          horses.value = data.horses;
+          transactions.value = data.transactions;
+        }
+        else {
+          const existingHorseIds = new Set(horses.value.map(h => h.id));
+          const existingTransactionIds = new Set(transactions.value.map(t => t.id));
 
-      const newHorses = data.horses.filter(h => !existingHorseIds.has(h.id));
-      const newTransactions = data.transactions.filter(t => !existingTransactionIds.has(t.id));
+          const newHorses = data.horses.filter(h => !existingHorseIds.has(h.id));
+          const newTransactions = data.transactions.filter(t => !existingTransactionIds.has(t.id));
 
-      horses.value.push(...newHorses);
-      transactions.value.push(...newTransactions);
-    }
-    saveToStorage();
-  }
+          horses.value.push(...newHorses);
+          transactions.value.push(...newTransactions);
+        }
 
-  async function clearAll() {
-    if (isDemoMode.value) {
-      horses.value = [];
-      transactions.value = [];
-      saveToStorage();
-    }
-    else {
-      if (!user.value) {
-        throw new Error('User not authenticated');
+        // Save to localStorage
+        const horseAdapter = getHorseAdapter() as LocalStorageAdapter<Horse>;
+        const transactionAdapter = getTransactionAdapter() as LocalStorageAdapter<HorseTransaction>;
+        horseAdapter.importData(horses.value);
+        transactionAdapter.importData(transactions.value);
+      }
+      else {
+        const horseAdapter = getHorseAdapter();
+        const transactionAdapter = getTransactionAdapter();
+
+        if (replace) {
+          // Delete all existing data
+          const horseIds = horses.value.map(h => h.id);
+          const transactionIds = transactions.value.map(t => t.id);
+
+          if (transactionIds.length > 0) {
+            await transactionAdapter.deleteMany(transactionIds);
+          }
+          if (horseIds.length > 0) {
+            await horseAdapter.deleteMany(horseIds);
+          }
+
+          horses.value = [];
+          transactions.value = [];
+        }
+
+        // Insert horses first, then transactions
+        for (const horse of data.horses) {
+          const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...horseData } = horse;
+          const created = await horseAdapter.create(horseData);
+          horses.value.push(created);
+        }
+
+        for (const tx of data.transactions) {
+          const { id: _txId, createdAt: _txCreatedAt, ...txData } = tx;
+          const created = await transactionAdapter.create(txData);
+          transactions.value.push(created);
+        }
       }
 
-      // Delete all horse transactions first
-      await supabase
-        .from('horse_transactions')
-        .delete()
-        .eq('user_id', user.value!.sub);
+      return { success: true, data: undefined };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to import data';
+      return { success: false, error: new Error(message) };
+    }
+  }
 
-      // Delete all horses
-      await supabase
-        .from('horses')
-        .delete()
-        .eq('user_id', user.value!.sub);
+  async function clearAll(): Promise<Result<void>> {
+    try {
+      if (isDemoMode.value) {
+        const horseAdapter = getHorseAdapter() as LocalStorageAdapter<Horse>;
+        const transactionAdapter = getTransactionAdapter() as LocalStorageAdapter<HorseTransaction>;
+        horseAdapter.clearAll();
+        transactionAdapter.clearAll();
+      }
+      else {
+        const horseAdapter = getHorseAdapter();
+        const transactionAdapter = getTransactionAdapter();
+
+        // Delete transactions first (FK constraint)
+        const transactionIds = transactions.value.map(t => t.id);
+        if (transactionIds.length > 0) {
+          await transactionAdapter.deleteMany(transactionIds);
+        }
+
+        const horseIds = horses.value.map(h => h.id);
+        if (horseIds.length > 0) {
+          await horseAdapter.deleteMany(horseIds);
+        }
+      }
 
       horses.value = [];
       transactions.value = [];
+      return { success: true, data: undefined };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to clear data';
+      return { success: false, error: new Error(message) };
     }
   }
 
@@ -622,6 +392,7 @@ export const useHorsesStore = defineStore('horses', () => {
     transactions: readonly(transactions),
     loading: readonly(loading),
     initialized: readonly(initialized),
+    error: readonly(error),
 
     // Getters
     sortedHorses,
