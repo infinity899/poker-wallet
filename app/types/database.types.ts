@@ -106,32 +106,42 @@ export interface Database {
         Row: DbSession;
         Insert: Omit<DbSession, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<DbSession, 'id' | 'user_id' | 'created_at'>>;
+        Relationships: [];
       };
       tournaments: {
         Row: DbTournament;
         Insert: Omit<DbTournament, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<DbTournament, 'id' | 'user_id' | 'created_at'>>;
+        Relationships: [];
       };
       horses: {
         Row: DbHorse;
         Insert: Omit<DbHorse, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<DbHorse, 'id' | 'user_id' | 'created_at'>>;
+        Relationships: [];
       };
       horse_transactions: {
         Row: DbHorseTransaction;
         Insert: Omit<DbHorseTransaction, 'id' | 'created_at'>;
         Update: Partial<Omit<DbHorseTransaction, 'id' | 'user_id' | 'created_at'>>;
+        Relationships: [];
       };
       reference_data: {
         Row: DbReferenceData;
         Insert: Omit<DbReferenceData, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<DbReferenceData, 'id' | 'user_id' | 'created_at'>>;
+        Relationships: [];
       };
       user_settings: {
         Row: DbUserSettings;
         Insert: Omit<DbUserSettings, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<DbUserSettings, 'id' | 'user_id' | 'created_at'>>;
+        Relationships: [];
       };
     };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 }

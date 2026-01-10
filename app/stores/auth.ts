@@ -126,9 +126,8 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('user_settings')
-        .update({ is_demo_mode: enabled } as any)
+      const { error } = await (supabase.from('user_settings') as any)
+        .update({ is_demo_mode: enabled })
         .eq('user_id', userId);
 
       if (error) {
