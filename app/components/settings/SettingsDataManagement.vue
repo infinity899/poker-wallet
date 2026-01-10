@@ -147,10 +147,10 @@ async function handleFileChange(event: Event) {
   input.value = '';
 }
 
-function handleReset() {
-  sessionsStore.clearAll();
-  tournamentsStore.clearAll();
-  referenceStore.resetToDefaults();
+async function handleReset() {
+  await sessionsStore.clearAll();
+  await tournamentsStore.clearAll();
+  await referenceStore.resetToDefaults();
   localStorage.clear();
   showResetConfirm.value = false;
   window.location.reload();

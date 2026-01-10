@@ -32,7 +32,7 @@
           :style="{ backgroundColor: tag.color }"
         />
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ tag.name }}</span>
-        <button class="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full" @click="referenceStore.deleteTag(tag.id)">
+        <button class="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full" @click="deleteTag(tag.id)">
           <TrashIcon class="w-3 h-3 text-danger-500" />
         </button>
       </div>
@@ -50,17 +50,23 @@ const newTag = reactive({
   color: '#3b82f6',
 });
 
-function addTag() {
+async function addTag() {
   if (!newTag.name.trim()) {
     return;
   }
 
-  referenceStore.addTag({
+  const result = await referenceStore.addTag({
     name: newTag.name.trim(),
     color: newTag.color,
   });
 
-  newTag.name = '';
-  newTag.color = '#3b82f6';
+  if (result.success) {
+    newTag.name = '';
+    newTag.color = '#3b82f6';
+  }
+}
+
+async function deleteTag(id: string) {
+  await referenceStore.deleteTag(id);
 }
 </script>

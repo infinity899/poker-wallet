@@ -49,7 +49,7 @@
             {{ venue.location }}
           </span>
         </div>
-        <button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded" @click="referenceStore.deleteVenue(venue.id)">
+        <button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded" @click="deleteVenue(venue.id)">
           <TrashIcon class="w-4 h-4 text-danger-500" />
         </button>
       </div>
@@ -68,18 +68,24 @@ const newVenue = reactive({
   location: '',
 });
 
-function addVenue() {
+async function addVenue() {
   if (!newVenue.name.trim()) {
     return;
   }
 
-  referenceStore.addVenue({
+  const result = await referenceStore.addVenue({
     name: newVenue.name.trim(),
     type: newVenue.type,
     location: newVenue.type === 'live' ? newVenue.location.trim() : undefined,
   });
 
-  newVenue.name = '';
-  newVenue.location = '';
+  if (result.success) {
+    newVenue.name = '';
+    newVenue.location = '';
+  }
+}
+
+async function deleteVenue(id: string) {
+  await referenceStore.deleteVenue(id);
 }
 </script>

@@ -1,5 +1,8 @@
-import type { Tag, Venue } from '~/types';
+import type { LocalStorageReferenceAdapter, SupabaseReferenceAdapter } from '~/adapters/referenceAdapter';
+import type { Result, Tag, Venue } from '~/types';
 import { defineStore } from 'pinia';
+import { createReferenceAdapter } from '~/adapters/referenceAdapter';
+import { useTypedSupabaseClient } from '~/composables/useTypedSupabase';
 import {
   DEFAULT_CURRENCIES,
   DEFAULT_GAME_TYPES,
@@ -7,22 +10,35 @@ import {
   DEFAULT_VENUES,
 } from '~/types';
 
-const STORAGE_KEY = 'poker-wallet-reference';
-
-interface ReferenceState {
-  venues: Venue[];
-  tags: Tag[];
-}
-
 export const useReferenceStore = defineStore('reference', () => {
+  const supabase = useTypedSupabaseClient();
+  const user = useSupabaseUser();
+
   // State
   const venues = ref<Venue[]>([]);
   const tags = ref<Tag[]>([]);
+  const loading = ref(false);
   const initialized = ref(false);
+  const error = ref<string | null>(null);
 
   // Constants
   const currencies = DEFAULT_CURRENCIES;
   const gameTypes = DEFAULT_GAME_TYPES;
+
+  // Get auth store (lazy to avoid circular dependency)
+  const getAuthStore = () => useAuthStore();
+
+  // Check if we're in demo mode
+  const isDemoMode = computed(() => getAuthStore().isDemoMode);
+
+  // Get the appropriate adapter based on mode
+  function getAdapter(): LocalStorageReferenceAdapter | SupabaseReferenceAdapter {
+    return createReferenceAdapter(
+      isDemoMode.value,
+      supabase,
+      user.value?.sub,
+    );
+  }
 
   // Getters
   const liveVenues = computed(() =>
@@ -34,97 +50,114 @@ export const useReferenceStore = defineStore('reference', () => {
   );
 
   // Actions
-  async function initialize() {
+  async function initialize(): Promise<void> {
     if (initialized.value) {
       return;
     }
 
+    loading.value = true;
+    error.value = null;
+
     try {
-      // Try to load from localStorage first
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const data: ReferenceState = JSON.parse(stored);
-        venues.value = data.venues;
-        tags.value = data.tags;
-      }
-      else {
-        // Try to load from mock data, fall back to defaults
-        try {
-          const response = await fetch('/data/reference.json');
-          if (response.ok) {
-            const data = await response.json();
-            venues.value = data.venues || DEFAULT_VENUES;
-            tags.value = data.tags || DEFAULT_TAGS;
-          }
-          else {
-            useDefaults();
-          }
-        }
-        catch {
-          useDefaults();
-        }
-        saveToStorage();
-      }
+      const authStore = getAuthStore();
+      await authStore.waitForSettings();
+
+      const adapter = getAdapter();
+      const data = await adapter.getAll();
+
+      venues.value = data.venues;
+      tags.value = data.tags;
     }
-    catch (error) {
-      console.error('Failed to initialize reference data:', error);
-      useDefaults();
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to load reference data';
+      error.value = message;
+      console.error('Failed to initialize reference data:', e);
+
+      // Fall back to defaults on error
+      venues.value = [...DEFAULT_VENUES];
+      tags.value = [...DEFAULT_TAGS];
     }
     finally {
+      loading.value = false;
       initialized.value = true;
     }
   }
 
-  function useDefaults() {
-    venues.value = [...DEFAULT_VENUES];
-    tags.value = [...DEFAULT_TAGS];
+  async function reload(): Promise<void> {
+    initialized.value = false;
+    venues.value = [];
+    tags.value = [];
+    error.value = null;
+    await initialize();
   }
 
-  function saveToStorage() {
-    const data: ReferenceState = {
-      venues: venues.value,
-      tags: tags.value,
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  async function saveToAdapter(): Promise<void> {
+    try {
+      const adapter = getAdapter();
+      await adapter.saveAll({ venues: venues.value, tags: tags.value });
+    }
+    catch (e) {
+      console.error('Failed to save reference data:', e);
+      throw e;
+    }
   }
 
   // Venue actions
-  function addVenue(venue: Omit<Venue, 'id'>): Venue {
-    const newVenue: Venue = {
-      ...venue,
-      id: crypto.randomUUID(),
-    };
-    venues.value.push(newVenue);
-    saveToStorage();
-    return newVenue;
+  async function addVenue(venue: Omit<Venue, 'id'>): Promise<Result<Venue>> {
+    try {
+      const newVenue: Venue = {
+        ...venue,
+        id: crypto.randomUUID(),
+      };
+      venues.value.push(newVenue);
+      await saveToAdapter();
+      return { success: true, data: newVenue };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to add venue';
+      return { success: false, error: new Error(message) };
+    }
   }
 
-  function updateVenue(id: string, updates: Partial<Omit<Venue, 'id'>>): boolean {
-    const index = venues.value.findIndex(v => v.id === id);
-    if (index === -1) {
-      return false;
-    }
+  async function updateVenue(id: string, updates: Partial<Omit<Venue, 'id'>>): Promise<Result<Venue>> {
+    try {
+      const index = venues.value.findIndex(v => v.id === id);
+      if (index === -1) {
+        return { success: false, error: new Error('Venue not found') };
+      }
 
-    const current = venues.value[index]!;
-    venues.value[index] = {
-      id: current.id,
-      name: updates.name ?? current.name,
-      type: updates.type ?? current.type,
-      location: updates.location !== undefined ? updates.location : current.location,
-    };
-    saveToStorage();
-    return true;
+      const current = venues.value[index]!;
+      const updated: Venue = {
+        id: current.id,
+        name: updates.name ?? current.name,
+        type: updates.type ?? current.type,
+        location: updates.location !== undefined ? updates.location : current.location,
+      };
+      venues.value[index] = updated;
+      await saveToAdapter();
+      return { success: true, data: updated };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to update venue';
+      return { success: false, error: new Error(message) };
+    }
   }
 
-  function deleteVenue(id: string): boolean {
-    const index = venues.value.findIndex(v => v.id === id);
-    if (index === -1) {
-      return false;
-    }
+  async function deleteVenue(id: string): Promise<Result<void>> {
+    try {
+      const index = venues.value.findIndex(v => v.id === id);
+      if (index === -1) {
+        return { success: false, error: new Error('Venue not found') };
+      }
 
-    venues.value.splice(index, 1);
-    saveToStorage();
-    return true;
+      venues.value.splice(index, 1);
+      await saveToAdapter();
+      return { success: true, data: undefined };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to delete venue';
+      return { success: false, error: new Error(message) };
+    }
   }
 
   function getVenueById(id: string): Venue | undefined {
@@ -136,41 +169,60 @@ export const useReferenceStore = defineStore('reference', () => {
   }
 
   // Tag actions
-  function addTag(tag: Omit<Tag, 'id'>): Tag {
-    const newTag: Tag = {
-      ...tag,
-      id: crypto.randomUUID(),
-    };
-    tags.value.push(newTag);
-    saveToStorage();
-    return newTag;
+  async function addTag(tag: Omit<Tag, 'id'>): Promise<Result<Tag>> {
+    try {
+      const newTag: Tag = {
+        ...tag,
+        id: crypto.randomUUID(),
+      };
+      tags.value.push(newTag);
+      await saveToAdapter();
+      return { success: true, data: newTag };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to add tag';
+      return { success: false, error: new Error(message) };
+    }
   }
 
-  function updateTag(id: string, updates: Partial<Omit<Tag, 'id'>>): boolean {
-    const index = tags.value.findIndex(t => t.id === id);
-    if (index === -1) {
-      return false;
-    }
+  async function updateTag(id: string, updates: Partial<Omit<Tag, 'id'>>): Promise<Result<Tag>> {
+    try {
+      const index = tags.value.findIndex(t => t.id === id);
+      if (index === -1) {
+        return { success: false, error: new Error('Tag not found') };
+      }
 
-    const current = tags.value[index]!;
-    tags.value[index] = {
-      id: current.id,
-      name: updates.name ?? current.name,
-      color: updates.color ?? current.color,
-    };
-    saveToStorage();
-    return true;
+      const current = tags.value[index]!;
+      const updated: Tag = {
+        id: current.id,
+        name: updates.name ?? current.name,
+        color: updates.color ?? current.color,
+      };
+      tags.value[index] = updated;
+      await saveToAdapter();
+      return { success: true, data: updated };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to update tag';
+      return { success: false, error: new Error(message) };
+    }
   }
 
-  function deleteTag(id: string): boolean {
-    const index = tags.value.findIndex(t => t.id === id);
-    if (index === -1) {
-      return false;
-    }
+  async function deleteTag(id: string): Promise<Result<void>> {
+    try {
+      const index = tags.value.findIndex(t => t.id === id);
+      if (index === -1) {
+        return { success: false, error: new Error('Tag not found') };
+      }
 
-    tags.value.splice(index, 1);
-    saveToStorage();
-    return true;
+      tags.value.splice(index, 1);
+      await saveToAdapter();
+      return { success: true, data: undefined };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to delete tag';
+      return { success: false, error: new Error(message) };
+    }
   }
 
   function getTagById(id: string): Tag | undefined {
@@ -182,9 +234,17 @@ export const useReferenceStore = defineStore('reference', () => {
   }
 
   // Reset to defaults
-  function resetToDefaults() {
-    useDefaults();
-    saveToStorage();
+  async function resetToDefaults(): Promise<Result<void>> {
+    try {
+      venues.value = [...DEFAULT_VENUES];
+      tags.value = [...DEFAULT_TAGS];
+      await saveToAdapter();
+      return { success: true, data: undefined };
+    }
+    catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to reset to defaults';
+      return { success: false, error: new Error(message) };
+    }
   }
 
   return {
@@ -193,7 +253,9 @@ export const useReferenceStore = defineStore('reference', () => {
     tags: readonly(tags),
     currencies,
     gameTypes,
+    loading: readonly(loading),
     initialized: readonly(initialized),
+    error: readonly(error),
 
     // Getters
     liveVenues,
@@ -201,6 +263,7 @@ export const useReferenceStore = defineStore('reference', () => {
 
     // Actions
     initialize,
+    reload,
     addVenue,
     updateVenue,
     deleteVenue,
