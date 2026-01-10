@@ -98,6 +98,45 @@ export interface DbUserSettings {
   updated_at: string;
 }
 
+export interface DbCommunity {
+  id: string;
+  name: string;
+  description: string | null;
+  avatar: string | null;
+  visibility: 'public' | 'private';
+  invite_code: string | null;
+  currency: 'USD' | 'EUR' | 'GBP' | 'CAD' | 'RON';
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbCommunityMember {
+  id: string;
+  community_id: string;
+  user_id: string;
+  role: 'admin' | 'member';
+  status: 'pending' | 'approved' | 'rejected';
+  display_name: string | null;
+  joined_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbSessionCommunity {
+  id: string;
+  session_id: string;
+  community_id: string;
+  created_at: string;
+}
+
+export interface DbTournamentCommunity {
+  id: string;
+  tournament_id: string;
+  community_id: string;
+  created_at: string;
+}
+
 // Type for Supabase Database
 export interface Database {
   public: {
@@ -136,6 +175,30 @@ export interface Database {
         Row: DbUserSettings;
         Insert: Omit<DbUserSettings, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<DbUserSettings, 'id' | 'user_id' | 'created_at'>>;
+        Relationships: [];
+      };
+      communities: {
+        Row: DbCommunity;
+        Insert: Omit<DbCommunity, 'id' | 'created_at' | 'updated_at' | 'invite_code'>;
+        Update: Partial<Omit<DbCommunity, 'id' | 'created_by' | 'created_at'>>;
+        Relationships: [];
+      };
+      community_members: {
+        Row: DbCommunityMember;
+        Insert: Omit<DbCommunityMember, 'id' | 'created_at' | 'updated_at' | 'joined_at'>;
+        Update: Partial<Omit<DbCommunityMember, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      session_communities: {
+        Row: DbSessionCommunity;
+        Insert: Omit<DbSessionCommunity, 'id' | 'created_at'>;
+        Update: never;
+        Relationships: [];
+      };
+      tournament_communities: {
+        Row: DbTournamentCommunity;
+        Insert: Omit<DbTournamentCommunity, 'id' | 'created_at'>;
+        Update: never;
         Relationships: [];
       };
     };

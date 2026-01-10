@@ -11,6 +11,8 @@ export interface SiteEntry {
 
 export interface CashSession {
   id: string;
+  userId?: string; // for community aggregation
+  communityId?: string; // linked community for result aggregation
   date: string; // ISO format YYYY-MM-DD
   startTime?: string; // HH:mm
   endTime?: string; // HH:mm

@@ -26,10 +26,6 @@
         <span class="text-foreground-muted dark:text-foreground-dark-muted">Tournaments</span>
       </div>
       <div class="flex items-center gap-2">
-        <span class="w-3 h-0.5 rounded-full bg-orange-400" />
-        <span class="text-foreground-muted dark:text-foreground-dark-muted">My Horses</span>
-      </div>
-      <div class="flex items-center gap-2">
         <span class="w-3 h-0.5 rounded-full bg-accent-500" />
         <span class="text-foreground-muted dark:text-foreground-dark-muted">Combined</span>
       </div>

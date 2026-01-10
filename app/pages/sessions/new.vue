@@ -222,6 +222,9 @@
             </button>
           </div>
         </div>
+
+        <!-- Communities -->
+        <CommunitiesSelector v-model="form.communityIds" />
       </div>
 
       <!-- Submit -->
@@ -271,6 +274,7 @@ const form = reactive({
   site: '',
   notes: '',
   tags: [] as string[],
+  communityIds: [] as string[],
 });
 
 // Site entries with their cash in/out
@@ -334,7 +338,9 @@ function validate() {
   return !errors.stake && !errors.duration;
 }
 
-function handleSubmit() {
+const communitiesStore = useCommunitiesStore();
+
+async function handleSubmit() {
   if (!validate()) {
     return;
   }
@@ -354,7 +360,7 @@ function handleSubmit() {
       cashOut: entry.cashOut ?? undefined,
     }));
 
-  sessionsStore.addSession({
+  const result = await sessionsStore.addSession({
     date: form.date,
     startTime: form.startTime || undefined,
     type: form.type,
@@ -374,6 +380,11 @@ function handleSubmit() {
     tags: form.tags,
     status,
   });
+
+  // Link session to selected communities
+  if (result.success && form.communityIds.length > 0) {
+    await communitiesStore.updateSessionCommunities(result.data.id, form.communityIds);
+  }
 
   router.push('/sessions');
 }

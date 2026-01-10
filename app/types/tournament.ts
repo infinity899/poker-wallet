@@ -2,6 +2,8 @@ import type { Currency, SessionStatus, SessionType } from './session';
 
 export interface Tournament {
   id: string;
+  userId?: string; // for community aggregation
+  communityId?: string; // linked community for result aggregation
   date: string; // ISO format YYYY-MM-DD
   type: SessionType;
   currency: Currency;

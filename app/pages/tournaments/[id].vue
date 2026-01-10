@@ -214,6 +214,9 @@
             </button>
           </div>
         </div>
+
+        <!-- Communities -->
+        <CommunitiesSelector v-model="form.communityIds" />
       </div>
 
       <!-- Submit -->
@@ -238,6 +241,7 @@ import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 
 const tournamentsStore = useTournamentsStore();
 const referenceStore = useReferenceStore();
+const communitiesStore = useCommunitiesStore();
 const router = useRouter();
 const route = useRoute();
 
@@ -265,6 +269,7 @@ const form = reactive({
   cashed: tournament.value?.cashed || false,
   notes: tournament.value?.notes || '',
   tags: tournament.value?.tags || [] as string[],
+  communityIds: communitiesStore.getCommunitiesForTournament(tournament.value?.id || ''),
 });
 
 const errors = reactive<Record<string, string>>({});
@@ -294,7 +299,7 @@ function validate() {
   return !errors.name && !errors.buyIn;
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   if (!validate()) {
     return;
   }
@@ -305,7 +310,7 @@ function handleSubmit() {
     newStatus = 'completed';
   }
 
-  tournamentsStore.updateTournament(tournamentId.value, {
+  await tournamentsStore.updateTournament(tournamentId.value, {
     date: form.date,
     type: form.type,
     currency: form.currency,
@@ -323,6 +328,9 @@ function handleSubmit() {
     tags: form.tags,
     status: newStatus,
   });
+
+  // Update community links
+  await communitiesStore.updateTournamentCommunities(tournamentId.value, form.communityIds);
 
   router.push('/tournaments');
 }

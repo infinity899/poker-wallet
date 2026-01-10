@@ -85,14 +85,14 @@ function handleSaveTournamentSession(data: {
 }
 
 const sessionsStore = useSessionsStore();
-const horsesStore = useHorsesStore();
+const communitiesStore = useCommunitiesStore();
 
 async function switchToRealData() {
   await authStore.setDemoMode(false);
   await Promise.all([
     sessionsStore.reload(),
     tournamentsStore.reload(),
-    horsesStore.reload(),
+    communitiesStore.reload(),
   ]);
 }
 

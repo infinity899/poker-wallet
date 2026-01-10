@@ -26,13 +26,6 @@
       </button>
       <button
         class="filter-chip"
-        :class="showHorses ? 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-700/50' : ''"
-        @click="emit('update:showHorses', !showHorses)"
-      >
-        Horses
-      </button>
-      <button
-        class="filter-chip"
         :class="showLive ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-700/50' : ''"
         @click="emit('update:showLive', !showLive)"
       >
@@ -53,7 +46,6 @@
 defineProps<{
   showCash: boolean;
   showTournaments: boolean;
-  showHorses: boolean;
   showLive: boolean;
   showOnline: boolean;
 }>();
@@ -61,7 +53,6 @@ defineProps<{
 const emit = defineEmits<{
   'update:showCash': [value: boolean];
   'update:showTournaments': [value: boolean];
-  'update:showHorses': [value: boolean];
   'update:showLive': [value: boolean];
   'update:showOnline': [value: boolean];
 }>();

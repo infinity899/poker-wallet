@@ -16,14 +16,6 @@
       :cumulative-data="tournamentCumulativeData"
       :stats="tournamentsStore.stats"
     />
-
-    <AnalyticsHorsesCharts
-      v-if="activeTab === 'horses'"
-      :cumulative-data="horsesCumulativeData"
-      :transaction-profit-data="horsesTransactionData"
-      :stats="horsesStore.allHorsesStats"
-      :horse-count="horsesStore.horses.length"
-    />
   </div>
 </template>
 
@@ -40,7 +32,6 @@ import {
   Title,
   Tooltip,
 } from 'chart.js';
-import { HORSES_COMBINED_COLOR } from '~/types/horse';
 import { calculateCumulativeProfit } from '~/utils/calculations';
 import { formatDateShort } from '~/utils/formatters';
 
@@ -58,9 +49,8 @@ ChartJS.register(
 
 const sessionsStore = useSessionsStore();
 const tournamentsStore = useTournamentsStore();
-const horsesStore = useHorsesStore();
 
-const activeTab = ref<'cash' | 'tournaments' | 'horses'>('cash');
+const activeTab = ref<'cash' | 'tournaments'>('cash');
 
 const cashCumulativeData = computed(() => {
   const data = calculateCumulativeProfit(
@@ -116,41 +106,6 @@ const tournamentCumulativeData = computed(() => {
       backgroundColor: 'rgba(139, 92, 246, 0.1)',
       fill: true,
       tension: 0.3,
-    }],
-  };
-});
-
-const horsesCumulativeData = computed(() => {
-  const data = horsesStore.getCumulativeProfitData();
-
-  return {
-    labels: data.map(d => formatDateShort(d.date)),
-    datasets: [{
-      label: 'Cumulative Profit',
-      data: data.map(d => d.profit),
-      borderColor: HORSES_COMBINED_COLOR,
-      backgroundColor: 'rgba(251, 146, 60, 0.1)',
-      fill: true,
-      tension: 0.3,
-    }],
-  };
-});
-
-const horsesTransactionData = computed(() => {
-  // Get all transactions sorted by date descending, take last 30
-  const allTransactions = [...horsesStore.transactions].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-  );
-  const transactions = allTransactions.slice(0, 30).reverse();
-
-  return {
-    labels: transactions.map(t => formatDateShort(t.date)),
-    datasets: [{
-      label: 'Transaction Result',
-      data: transactions.map(t => t.result),
-      backgroundColor: transactions.map(t =>
-        t.result >= 0 ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
-      ),
     }],
   };
 });

@@ -56,8 +56,8 @@ const navItems = [
     iconActive: TrophyIconSolid,
   },
   {
-    path: '/horses',
-    label: 'Horses',
+    path: '/communities',
+    label: 'Communities',
     icon: UserGroupIcon,
     iconActive: UserGroupIconSolid,
   },

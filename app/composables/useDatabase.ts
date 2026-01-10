@@ -5,6 +5,7 @@ import { useTypedSupabaseClient } from '~/composables/useTypedSupabase';
 export function dbSessionToSession(dbSession: DbSession): CashSession {
   return {
     id: dbSession.id,
+    userId: dbSession.user_id,
     date: dbSession.date,
     startTime: dbSession.start_time ?? undefined,
     endTime: dbSession.end_time ?? undefined,
@@ -65,6 +66,7 @@ export function sessionToDbSession(session: Omit<CashSession, 'id' | 'createdAt'
 export function dbTournamentToTournament(dbTournament: DbTournament): Tournament {
   return {
     id: dbTournament.id,
+    userId: dbTournament.user_id,
     date: dbTournament.date,
     type: dbTournament.type,
     currency: dbTournament.currency,

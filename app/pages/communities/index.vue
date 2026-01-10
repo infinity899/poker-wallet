@@ -1,5 +1,5 @@
 <template>
-  <HorsesList />
+  <CommunitiesList />
 </template>
 
 <script setup lang="ts">

@@ -62,7 +62,7 @@ import { CheckIcon, CloudIcon, ComputerDesktopIcon } from '@heroicons/vue/24/out
 const authStore = useAuthStore();
 const sessionsStore = useSessionsStore();
 const tournamentsStore = useTournamentsStore();
-const horsesStore = useHorsesStore();
+const communitiesStore = useCommunitiesStore();
 
 const loading = ref(false);
 
@@ -99,7 +99,7 @@ async function setDataMode(isDemo: boolean) {
     await Promise.all([
       sessionsStore.reload(),
       tournamentsStore.reload(),
-      horsesStore.reload(),
+      communitiesStore.reload(),
     ]);
   }
   finally {

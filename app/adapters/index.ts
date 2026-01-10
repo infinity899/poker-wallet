@@ -1,4 +1,4 @@
-export { createHorseAdapter, createHorseTransactionAdapter, STORAGE_KEY_HORSES, STORAGE_KEY_TRANSACTIONS } from './horseAdapter';
+export { createCommunityAdapter, createCommunityMemberAdapter, STORAGE_KEY_COMMUNITIES, STORAGE_KEY_MEMBERS } from './communityAdapter';
 export { LocalStorageAdapter } from './LocalStorageAdapter';
 export { createReferenceAdapter, REFERENCE_STORAGE_KEY } from './referenceAdapter';
 export { createSessionAdapter, SESSION_STORAGE_KEY } from './sessionAdapter';

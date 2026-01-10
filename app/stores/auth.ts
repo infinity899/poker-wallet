@@ -152,8 +152,10 @@ export const useAuthStore = defineStore('auth', () => {
   function clearMockData() {
     localStorage.removeItem('poker-wallet-sessions');
     localStorage.removeItem('poker-wallet-tournaments');
-    localStorage.removeItem('poker-wallet-horses');
-    localStorage.removeItem('poker-wallet-horse-transactions');
+    localStorage.removeItem('poker-wallet-communities');
+    localStorage.removeItem('poker-wallet-community-members');
+    localStorage.removeItem('poker-wallet-session-communities');
+    localStorage.removeItem('poker-wallet-tournament-communities');
     localStorage.removeItem('poker-wallet-reference');
   }
 

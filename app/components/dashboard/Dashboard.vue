@@ -3,7 +3,6 @@
     <DashboardHeader
       v-model:show-cash="showCash"
       v-model:show-tournaments="showTournaments"
-      v-model:show-horses="showHorses"
       v-model:show-live="showLive"
       v-model:show-online="showOnline"
     />
@@ -36,7 +35,6 @@ import {
   Title,
   Tooltip,
 } from 'chart.js';
-import { HORSES_COMBINED_COLOR } from '~/types/horse';
 import { formatDateShort } from '~/utils/formatters';
 
 ChartJS.register(
@@ -52,11 +50,9 @@ ChartJS.register(
 
 const sessionsStore = useSessionsStore();
 const tournamentsStore = useTournamentsStore();
-const horsesStore = useHorsesStore();
 
 const showCash = ref(true);
 const showTournaments = ref(true);
-const showHorses = ref(true);
 const showLive = ref(true);
 const showOnline = ref(true);
 
@@ -134,18 +130,10 @@ const recentTournaments = computed(() =>
   tournamentsStore.sortedTournaments.slice(0, 5),
 );
 
-// Filtered horses transactions
-const filteredHorsesTransactions = computed(() => {
-  if (!showHorses.value) {
-    return [];
-  }
-  return horsesStore.transactions;
-});
-
-// Combined chart data with 4 lines: Cash, Tournaments, Horses, Combined
+// Combined chart data with 3 lines: Cash, Tournaments, Combined
 const combinedChartData = computed(() => {
   // Get all cash session data points
-  const cashData: { date: string; profit: number; type: 'cash' | 'tournament' | 'horses' }[]
+  const cashData: { date: string; profit: number; type: 'cash' | 'tournament' }[]
     = filteredSessions.value.map(s => ({
       date: s.date,
       profit: s.result,
@@ -153,7 +141,7 @@ const combinedChartData = computed(() => {
     }));
 
   // Get all tournament data points
-  const tournamentData: { date: string; profit: number; type: 'cash' | 'tournament' | 'horses' }[]
+  const tournamentData: { date: string; profit: number; type: 'cash' | 'tournament' }[]
     = filteredTournaments.value.map((t) => {
       const cost = (t.buyIn + t.fee) * (t.entries + 1);
       return {
@@ -163,16 +151,8 @@ const combinedChartData = computed(() => {
       };
     });
 
-  // Get all horses transaction data points
-  const horsesData: { date: string; profit: number; type: 'cash' | 'tournament' | 'horses' }[]
-    = filteredHorsesTransactions.value.map(t => ({
-      date: t.date,
-      profit: t.result,
-      type: 'horses' as const,
-    }));
-
   // Combine and sort all data by date
-  const allData = [...cashData, ...tournamentData, ...horsesData].sort(
+  const allData = [...cashData, ...tournamentData].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   );
 
@@ -183,19 +163,16 @@ const combinedChartData = computed(() => {
   // Calculate cumulative values for each line
   let cashCumulative = 0;
   let tournamentCumulative = 0;
-  let horsesCumulative = 0;
   let combinedCumulative = 0;
 
   const labels: string[] = [];
   const cashValues: (number | null)[] = [];
   const tournamentValues: (number | null)[] = [];
-  const horsesValues: (number | null)[] = [];
   const combinedValues: number[] = [];
 
   // Track last known values for interpolation
   let lastCashValue = 0;
   let lastTournamentValue = 0;
-  let lastHorsesValue = 0;
 
   for (const item of allData) {
     labels.push(formatDateShort(item.date));
@@ -205,21 +182,12 @@ const combinedChartData = computed(() => {
       lastCashValue = cashCumulative;
       cashValues.push(cashCumulative);
       tournamentValues.push(lastTournamentValue);
-      horsesValues.push(lastHorsesValue);
     }
-    else if (item.type === 'tournament') {
+    else {
       tournamentCumulative += item.profit;
       lastTournamentValue = tournamentCumulative;
       tournamentValues.push(tournamentCumulative);
       cashValues.push(lastCashValue);
-      horsesValues.push(lastHorsesValue);
-    }
-    else {
-      horsesCumulative += item.profit;
-      lastHorsesValue = horsesCumulative;
-      horsesValues.push(horsesCumulative);
-      cashValues.push(lastCashValue);
-      tournamentValues.push(lastTournamentValue);
     }
 
     combinedCumulative += item.profit;
@@ -240,7 +208,7 @@ const combinedChartData = computed(() => {
       pointHoverBackgroundColor: 'rgb(16, 185, 129)',
       pointHoverBorderColor: '#fff',
       pointHoverBorderWidth: 2,
-      order: 4,
+      order: 3,
     },
     {
       label: 'Cash Sessions',
@@ -255,7 +223,7 @@ const combinedChartData = computed(() => {
       pointHoverBackgroundColor: 'rgb(59, 130, 246)',
       pointHoverBorderColor: '#fff',
       pointHoverBorderWidth: 2,
-      order: 3,
+      order: 2,
     },
     {
       label: 'Tournaments',
@@ -270,28 +238,9 @@ const combinedChartData = computed(() => {
       pointHoverBackgroundColor: 'rgb(168, 85, 247)',
       pointHoverBorderColor: '#fff',
       pointHoverBorderWidth: 2,
-      order: 2,
+      order: 1,
     },
   ];
-
-  // Only add horses dataset if there are horses transactions
-  if (showHorses.value && filteredHorsesTransactions.value.length > 0) {
-    datasets.push({
-      label: 'My Horses',
-      data: horsesValues,
-      borderColor: HORSES_COMBINED_COLOR,
-      backgroundColor: 'rgba(251, 146, 60, 0.08)',
-      fill: true,
-      tension: 0.4,
-      borderWidth: 3,
-      pointRadius: 0,
-      pointHoverRadius: 6,
-      pointHoverBackgroundColor: HORSES_COMBINED_COLOR,
-      pointHoverBorderColor: '#fff',
-      pointHoverBorderWidth: 2,
-      order: 1,
-    });
-  }
 
   return {
     labels,
