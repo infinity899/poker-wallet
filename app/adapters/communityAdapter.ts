@@ -246,12 +246,9 @@ export class SupabaseCommunityAdapter {
       .from('communities')
       .select('*')
       .eq('invite_code', code)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        return null; // Not found
-      }
       throw new Error(`Failed to fetch community by invite code: ${error.message}`);
     }
 

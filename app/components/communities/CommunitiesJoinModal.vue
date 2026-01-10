@@ -195,7 +195,7 @@ async function handleSubmit() {
 
   try {
     const result = await communitiesStore.joinByInviteCode(
-      inviteCode.value.trim().toUpperCase(),
+      inviteCode.value.trim().toLowerCase(),
       displayName.value.trim() || undefined,
     );
 
