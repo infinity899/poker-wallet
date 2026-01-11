@@ -63,10 +63,10 @@ defineProps<{
   tournaments: Tournament[];
 }>();
 
-function getTournamentProfit(tournament: Tournament): number {
-  const cost = (tournament.buyIn + tournament.fee) * (tournament.entries + 1);
-  return tournament.winnings - cost;
-}
+const tournamentsStore = useTournamentsStore();
+
+// Use store's getTournamentProfit for consistency
+const { getTournamentProfit } = tournamentsStore;
 
 function getOrdinal(n: number): string {
   const suffix = n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th';

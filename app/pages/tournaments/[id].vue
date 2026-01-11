@@ -9,16 +9,16 @@
         <ArrowLeftIcon class="w-5 h-5 text-foreground-muted dark:text-foreground-dark-muted" />
       </NuxtLink>
       <h1 class="text-xl font-semibold text-foreground dark:text-foreground-dark tracking-tight">
-        Edit Tournament
+        {{ tournament?.isSession ? 'Edit Session' : 'Edit Tournament' }}
       </h1>
     </div>
 
     <form class="space-y-5" @submit.prevent="handleSubmit">
       <div class="card p-5 space-y-4">
-        <!-- In Progress Banner -->
-        <div v-if="isCurrentlyInProgress" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg p-3">
+        <!-- In Progress Banner (sessions only) -->
+        <div v-if="isCurrentlyInProgress && isSession" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg p-3">
           <p class="text-sm text-amber-800 dark:text-amber-200">
-            This tournament is in progress. Add finish position and winnings to complete it.
+            This session is in progress. Add bankroll final to complete it.
           </p>
         </div>
 
@@ -60,75 +60,140 @@
           </p>
         </div>
 
-        <!-- Currency & Venue/Site -->
-        <div class="grid grid-cols-2 gap-4">
+        <!-- Currency -->
+        <div>
+          <label class="label">Currency</label>
+          <select v-model="form.currency" class="input max-w-32">
+            <option v-for="currency in referenceStore.currencies" :key="currency" :value="currency">
+              {{ currency }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Site/Venue with Buy-in/Fee (for single tournaments) -->
+        <div v-if="!isSession" class="grid grid-cols-[1fr,auto,auto] gap-3 items-end">
           <div>
-            <label class="label">Currency</label>
-            <select v-model="form.currency" class="input">
-              <option v-for="currency in referenceStore.currencies" :key="currency" :value="currency">
-                {{ currency }}
-              </option>
-            </select>
-          </div>
-          <div>
-            <label class="label">
-              {{ form.type === 'live' ? 'Venue' : 'Site' }}
-            </label>
-            <select
-              v-if="form.type === 'live'"
-              v-model="form.venue"
-              class="input"
-            >
+            <label class="label">{{ form.type === 'live' ? 'Venue' : 'Site' }}</label>
+            <select v-model="form.venue" class="input">
               <option value="">
-                Select venue
+                Select {{ form.type === 'live' ? 'venue' : 'site' }}
               </option>
               <option v-for="venue in venues" :key="venue.id" :value="venue.name">
                 {{ venue.name }}
               </option>
             </select>
-            <select
-              v-else
-              v-model="form.site"
-              class="input"
-            >
-              <option value="">
-                Select site
-              </option>
-              <option v-for="site in venues" :key="site.id" :value="site.name">
-                {{ site.name }}
-              </option>
-            </select>
           </div>
-        </div>
-
-        <!-- Buy-in & Fee -->
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="label">Buy-in ($)</label>
+          <div class="w-24">
+            <label class="label">Buy-in</label>
             <input
               v-model.number="form.buyIn"
               type="number"
+              step="1"
               min="0"
-              class="input font-mono"
-              :class="{ 'input-error': errors.buyIn }"
+              placeholder="0"
+              class="input font-mono text-sm"
             >
-            <p v-if="errors.buyIn" class="mt-1 text-xs text-danger-600 dark:text-danger-400">
-              {{ errors.buyIn }}
-            </p>
           </div>
-          <div>
-            <label class="label">Fee ($)</label>
+          <div class="w-24">
+            <label class="label">Fee</label>
             <input
               v-model.number="form.fee"
               type="number"
+              step="1"
               min="0"
-              class="input font-mono"
+              placeholder="0"
+              class="input font-mono text-sm"
             >
           </div>
         </div>
 
-        <!-- Entries & Winnings -->
-        <div class="grid grid-cols-2 gap-4">
+        <!-- Sites/Venues with Bankroll (for sessions) -->
+        <div v-else class="space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="label mb-0">{{ form.type === 'live' ? 'Venues' : 'Sites' }}</label>
+            <button
+              type="button"
+              class="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center gap-1"
+              @click="addSiteEntry"
+            >
+              <PlusIcon class="w-3.5 h-3.5" />
+              Add {{ form.type === 'live' ? 'Venue' : 'Site' }}
+            </button>
+          </div>
+
+          <div class="space-y-2">
+            <div
+              v-for="(entry, index) in siteEntries"
+              :key="index"
+              class="grid grid-cols-[1fr,auto,auto,auto] gap-2 items-end"
+            >
+              <div>
+                <label v-if="index === 0" class="label text-xs">{{ form.type === 'live' ? 'Venue' : 'Site' }}</label>
+                <select
+                  v-model="entry.name"
+                  class="input"
+                >
+                  <option value="">
+                    Select {{ form.type === 'live' ? 'venue' : 'site' }}
+                  </option>
+                  <option v-for="venue in venues" :key="venue.id" :value="venue.name">
+                    {{ venue.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="w-28">
+                <label v-if="index === 0" class="label text-xs">Bankroll Initial</label>
+                <input
+                  v-model.number="entry.bankrollInitial"
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="0"
+                  class="input font-mono text-sm"
+                >
+              </div>
+              <div class="w-28">
+                <label v-if="index === 0" class="label text-xs">Bankroll Final</label>
+                <input
+                  v-model.number="entry.bankrollFinal"
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="0"
+                  class="input font-mono text-sm"
+                >
+              </div>
+              <div class="w-8">
+                <label v-if="index === 0" class="label text-xs">&nbsp;</label>
+                <button
+                  v-if="siteEntries.length > 1"
+                  type="button"
+                  class="p-2 hover:bg-danger-50 dark:hover:bg-danger-900/30 rounded transition-colors"
+                  @click="removeSiteEntry(index)"
+                >
+                  <TrashIcon class="w-4 h-4 text-danger-500 dark:text-danger-400" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Totals row -->
+          <div v-if="siteEntries.length > 1" class="grid grid-cols-[1fr,auto,auto,auto] gap-2 items-center pt-2 border-t border-border-subtle dark:border-border-dark-subtle">
+            <div class="text-sm font-medium text-foreground-muted dark:text-foreground-dark-muted text-right pr-2">
+              Total
+            </div>
+            <div class="w-28 text-sm font-mono font-medium text-foreground dark:text-foreground-dark text-center">
+              {{ totalBankrollInitial || '-' }}
+            </div>
+            <div class="w-28 text-sm font-mono font-medium text-foreground dark:text-foreground-dark text-center">
+              {{ totalBankrollFinal || '-' }}
+            </div>
+            <div class="w-8" />
+          </div>
+        </div>
+
+        <!-- Re-entries & Winnings (single tournaments only) -->
+        <div v-if="!isSession" class="grid grid-cols-2 gap-4">
           <div>
             <label class="label">Re-entries</label>
             <input
@@ -152,10 +217,10 @@
           </div>
         </div>
 
-        <!-- Field Size & Finish -->
-        <div class="grid grid-cols-2 gap-4">
+        <!-- Field Size & Finish (single tournaments only) -->
+        <div v-if="!isSession" class="grid grid-cols-2 gap-4">
           <div>
-            <label class="label">Field Size</label>
+            <label class="label">Field Size <span class="text-foreground-muted dark:text-foreground-dark-muted font-normal">(optional)</span></label>
             <input
               v-model.number="form.fieldSize"
               type="number"
@@ -174,8 +239,8 @@
           </div>
         </div>
 
-        <!-- Cashed -->
-        <div class="flex items-center gap-2">
+        <!-- Cashed (single tournaments only) -->
+        <div v-if="!isSession" class="flex items-center gap-2">
           <input
             id="cashed"
             v-model="form.cashed"
@@ -185,6 +250,19 @@
           <label for="cashed" class="text-sm font-medium text-foreground-secondary dark:text-foreground-dark-secondary">
             Cashed (In The Money)
           </label>
+        </div>
+
+        <!-- Session Profit Preview -->
+        <div v-if="isSession" class="p-3 rounded-lg bg-surface-secondary dark:bg-surface-dark-tertiary border border-border dark:border-border-dark">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted uppercase tracking-wider">Session Profit</span>
+            <span
+              class="text-base font-semibold"
+              :class="sessionProfit >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
+            >
+              {{ sessionProfit >= 0 ? '+' : '' }}{{ sessionProfit }}
+            </span>
+          </div>
         </div>
 
         <!-- Notes -->
@@ -224,8 +302,8 @@
         <NuxtLink to="/tournaments" class="btn-secondary flex-1">
           Cancel
         </NuxtLink>
-        <button v-if="isCurrentlyInProgress && willBeCompleted" type="submit" class="btn-primary flex-1">
-          Complete Tournament
+        <button v-if="isCurrentlyInProgress && willBeCompleted && isSession" type="submit" class="btn-primary flex-1">
+          Complete Session
         </button>
         <button v-else type="submit" class="btn-primary flex-1">
           Save Changes
@@ -237,7 +315,16 @@
 
 <script setup lang="ts">
 import type { Currency, SessionStatus, SessionType } from '~/types';
-import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
+import type { TournamentSiteEntry } from '~/types/tournament';
+import { ArrowLeftIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline';
+
+interface FormSiteEntry {
+  name: string;
+  buyIn: number | null;
+  fee: number | null;
+  bankrollInitial: number | null;
+  bankrollFinal: number | null;
+}
 
 const tournamentsStore = useTournamentsStore();
 const referenceStore = useReferenceStore();
@@ -253,17 +340,78 @@ if (!tournament.value) {
   router.push('/tournaments');
 }
 
+// Initialize site entries from existing tournament data
+function initSiteEntries(): FormSiteEntry[] {
+  const t = tournament.value;
+  if (!t) {
+    return [{ name: '', buyIn: null, fee: null, bankrollInitial: null, bankrollFinal: null }];
+  }
+
+  // If tournament has sites array, use it
+  if (t.sites && t.sites.length > 0) {
+    return t.sites.map(site => ({
+      name: site.name,
+      buyIn: site.buyIn ?? null,
+      fee: site.fee ?? null,
+      bankrollInitial: site.bankrollInitial ?? null,
+      bankrollFinal: site.bankrollFinal ?? null,
+    }));
+  }
+
+  // Otherwise, create single entry from primary site/venue
+  const primaryName = t.type === 'live' ? (t.venue || '') : (t.site || '');
+  return [{
+    name: primaryName,
+    buyIn: t.buyIn ?? null,
+    fee: t.fee ?? null,
+    bankrollInitial: null,
+    bankrollFinal: null,
+  }];
+}
+
+const siteEntries = ref<FormSiteEntry[]>(initSiteEntries());
+
+function addSiteEntry() {
+  siteEntries.value.push({ name: '', buyIn: null, fee: null, bankrollInitial: null, bankrollFinal: null });
+}
+
+// Check if this is a session (not a single tournament)
+const isSession = computed(() => tournament.value?.isSession === true);
+
+function removeSiteEntry(index: number) {
+  if (siteEntries.value.length > 1) {
+    siteEntries.value.splice(index, 1);
+  }
+}
+
+// Calculate bankroll totals from all site entries (for sessions)
+const totalBankrollInitial = computed(() => {
+  return siteEntries.value.reduce((sum, entry) => sum + (entry.bankrollInitial || 0), 0);
+});
+
+const totalBankrollFinal = computed(() => {
+  return siteEntries.value.reduce((sum, entry) => sum + (entry.bankrollFinal || 0), 0);
+});
+
+// Get initial venue for single tournaments
+function getInitialVenue(): string {
+  const t = tournament.value;
+  if (!t) {
+    return '';
+  }
+  return t.type === 'live' ? (t.venue || '') : (t.site || '');
+}
+
 const form = reactive({
   date: tournament.value?.date || '',
   type: tournament.value?.type || 'online' as SessionType,
   currency: tournament.value?.currency || 'USD' as Currency,
   name: tournament.value?.name || '',
+  venue: getInitialVenue(),
   buyIn: tournament.value?.buyIn || 0,
   fee: tournament.value?.fee || 0,
   entries: tournament.value?.entries || 0,
   winnings: tournament.value?.winnings || 0,
-  venue: tournament.value?.venue || '',
-  site: tournament.value?.site || '',
   fieldSize: tournament.value?.fieldSize as number | undefined,
   finishPosition: tournament.value?.finishPosition as number | undefined,
   cashed: tournament.value?.cashed || false,
@@ -279,9 +427,21 @@ const isCurrentlyInProgress = computed(() => {
   return tournament.value?.status === 'in_progress';
 });
 
-// Check if the form will result in a completed tournament
+// Session profit calculation
+const sessionProfit = computed(() => {
+  return totalBankrollFinal.value - totalBankrollInitial.value;
+});
+
+// Check if the form will result in a completed tournament/session
 const willBeCompleted = computed(() => {
-  return form.finishPosition !== undefined && form.finishPosition !== null && form.finishPosition > 0;
+  if (isSession.value) {
+    // For sessions, complete when bankrollFinal is entered
+    return totalBankrollFinal.value > 0;
+  }
+  // For single tournaments
+  const hasFinish = form.finishPosition !== undefined && form.finishPosition !== null && form.finishPosition > 0;
+  const hasWinnings = form.winnings > 0;
+  return hasFinish || hasWinnings;
 });
 
 function validate() {
@@ -292,10 +452,6 @@ function validate() {
     errors.name = 'Tournament name is required';
   }
 
-  if (form.buyIn < 0) {
-    errors.buyIn = 'Buy-in must be positive';
-  }
-
   return !errors.name && !errors.buyIn;
 }
 
@@ -304,30 +460,64 @@ async function handleSubmit() {
     return;
   }
 
-  // Determine the new status
-  let newStatus: SessionStatus = tournament.value?.status || 'completed';
-  if (isCurrentlyInProgress.value && willBeCompleted.value) {
-    newStatus = 'completed';
-  }
+  if (isSession.value) {
+    // For sessions, determine status based on bankroll final
+    let newStatus: SessionStatus = tournament.value?.status || 'completed';
+    if (isCurrentlyInProgress.value && willBeCompleted.value) {
+      newStatus = 'completed';
+    }
 
-  await tournamentsStore.updateTournament(tournamentId.value, {
-    date: form.date,
-    type: form.type,
-    currency: form.currency,
-    name: form.name,
-    buyIn: form.buyIn,
-    fee: form.fee,
-    entries: form.entries,
-    winnings: form.winnings,
-    venue: form.type === 'live' ? form.venue : undefined,
-    site: form.type === 'online' ? form.site : undefined,
-    fieldSize: form.fieldSize,
-    finishPosition: form.finishPosition,
-    cashed: form.cashed,
-    notes: form.notes || undefined,
-    tags: form.tags,
-    status: newStatus,
-  });
+    // Get primary site/venue from first entry
+    const primaryEntry = siteEntries.value[0];
+    const primaryName = primaryEntry?.name || '';
+
+    // Build sites array with entries that have names
+    const sites: TournamentSiteEntry[] = siteEntries.value
+      .filter(entry => entry.name)
+      .map(entry => ({
+        name: entry.name,
+        bankrollInitial: entry.bankrollInitial ?? undefined,
+        bankrollFinal: entry.bankrollFinal ?? undefined,
+      }));
+
+    await tournamentsStore.updateTournament(tournamentId.value, {
+      date: form.date,
+      type: form.type,
+      currency: form.currency,
+      name: form.name,
+      buyIn: 0, // Sessions don't track buy-in
+      fee: 0, // Sessions don't track fee
+      entries: 0,
+      winnings: totalBankrollFinal.value, // Store final bankroll as winnings
+      venue: form.type === 'live' ? primaryName : undefined,
+      site: form.type === 'online' ? primaryName : undefined,
+      sites: sites.length > 0 ? sites : undefined,
+      notes: form.notes || undefined,
+      tags: form.tags,
+      status: newStatus,
+    });
+  }
+  else {
+    // For single tournaments - always completed, no multi-site
+    await tournamentsStore.updateTournament(tournamentId.value, {
+      date: form.date,
+      type: form.type,
+      currency: form.currency,
+      name: form.name,
+      buyIn: form.buyIn,
+      fee: form.fee,
+      entries: form.entries,
+      winnings: form.winnings,
+      venue: form.type === 'live' ? form.venue || undefined : undefined,
+      site: form.type === 'online' ? form.venue || undefined : undefined,
+      fieldSize: form.fieldSize,
+      finishPosition: form.finishPosition,
+      cashed: form.cashed,
+      notes: form.notes || undefined,
+      tags: form.tags,
+      status: 'completed',
+    });
+  }
 
   // Update community links
   await communitiesStore.updateTournamentCommunities(tournamentId.value, form.communityIds);

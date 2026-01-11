@@ -1,5 +1,43 @@
 [
   {
+    "id": "in-progress-tournament-001",
+    "date": "2026-01-11",
+    "type": "live",
+    "currency": "USD",
+    "buyIn": 500,
+    "fee": 50,
+    "entries": 0,
+    "winnings": 0,
+    "name": "Sunday Million - In Progress",
+    "cashed": false,
+    "tags": [],
+    "createdAt": "2026-01-11T10:00:00.000Z",
+    "updatedAt": "2026-01-11T10:00:00.000Z",
+    "venue": "Bellagio",
+    "status": "in_progress"
+  },
+  {
+    "id": "in-progress-tournament-002",
+    "date": "2026-01-10",
+    "type": "online",
+    "currency": "USD",
+    "buyIn": 100,
+    "fee": 10,
+    "entries": 1,
+    "winnings": 0,
+    "name": "Daily Deepstack - Multi Site",
+    "cashed": false,
+    "tags": [],
+    "createdAt": "2026-01-10T15:00:00.000Z",
+    "updatedAt": "2026-01-10T15:00:00.000Z",
+    "site": "PokerStars",
+    "sites": [
+      { "name": "PokerStars", "buyIn": 50, "fee": 5 },
+      { "name": "GGPoker", "buyIn": 50, "fee": 5 }
+    ],
+    "status": "in_progress"
+  },
+  {
     "id": "2c45e6c8-c989-4f97-98b9-8796b67cf8d5",
     "date": "2026-01-01",
     "type": "online",
@@ -15,7 +53,8 @@
     "tags": [],
     "createdAt": "2026-01-01T05:34:26.483Z",
     "updatedAt": "2026-01-01T05:34:26.483Z",
-    "site": "partypoker"
+    "site": "partypoker",
+    "status": "completed"
   },
   {
     "id": "9eb693ba-ed7c-4de9-9b63-7e8eaed9664b",

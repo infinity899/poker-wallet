@@ -44,12 +44,15 @@ export interface DbTournament {
   winnings: number;
   venue: string | null;
   site: string | null;
+  sites: { name: string; buyIn?: number; fee?: number; entries?: number; bankrollInitial?: number; bankrollFinal?: number }[] | null;
   field_size: number | null;
   finish_position: number | null;
   cashed: boolean | null;
   notes: string | null;
   tags: string[];
   status: 'in_progress' | 'completed';
+  is_session: boolean | null;
+  session_count: number | null;
   created_at: string;
   updated_at: string;
 }

@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
   winnings NUMERIC NOT NULL DEFAULT 0, -- total prize won (0 if busted)
   venue TEXT, -- for live tournaments
   site TEXT, -- for online tournaments
+  sites JSONB DEFAULT NULL, -- Array of site entries: [{name: string, buyIn?: number, fee?: number, entries?: number}]
   field_size INTEGER,
   finish_position INTEGER,
   cashed BOOLEAN,

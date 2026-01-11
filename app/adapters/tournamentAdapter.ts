@@ -79,6 +79,15 @@ export function createTournamentAdapter(
       if (tournament.status !== undefined) {
         result.status = tournament.status;
       }
+      if (tournament.sites !== undefined) {
+        result.sites = tournament.sites;
+      }
+      if (tournament.isSession !== undefined) {
+        result.is_session = tournament.isSession;
+      }
+      if (tournament.sessionCount !== undefined) {
+        result.session_count = tournament.sessionCount;
+      }
 
       return result as Partial<DbTournament>;
     },

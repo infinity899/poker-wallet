@@ -3,7 +3,7 @@
 -- BACKWARDS COMPATIBLE: Migrates existing data to new schema
 
 -- ============================================
--- STEP 1: ADD NEW COLUMNS
+-- STEP 1: ADD NEW COLUMNS TO SESSIONS
 -- ============================================
 
 -- Add 'sites' column to store multi-site session data as JSONB array
@@ -16,10 +16,19 @@ ALTER TABLE sessions
 ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'completed'
 CHECK (status IN ('in_progress', 'completed'));
 
+-- ============================================
+-- STEP 2: ADD NEW COLUMNS TO TOURNAMENTS
+-- ============================================
+
 -- Add 'status' column to tournaments
 ALTER TABLE tournaments
 ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'completed'
 CHECK (status IN ('in_progress', 'completed'));
+
+-- Add 'sites' column to tournaments for multi-site support
+-- Structure: [{name: string, buyIn?: number, fee?: number, entries?: number}]
+ALTER TABLE tournaments
+ADD COLUMN IF NOT EXISTS sites JSONB DEFAULT NULL;
 
 -- ============================================
 -- STEP 2: MIGRATE EXISTING SESSION DATA

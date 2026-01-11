@@ -31,7 +31,8 @@
 </template>
 
 <script setup lang="ts">
-import type { Currency, SessionType } from '~/types';
+import type { Currency, SessionStatus, SessionType } from '~/types';
+import type { TournamentSiteEntry } from '~/types/tournament';
 
 const tournamentsStore = useTournamentsStore();
 const { isMobile } = useBreakpoint();
@@ -62,7 +63,7 @@ function closeSessionModal() {
   showSessionModal.value = false;
 }
 
-function handleSaveSession(data: {
+async function handleSaveSession(data: {
   date: string;
   type: SessionType;
   currency: Currency;
@@ -73,12 +74,23 @@ function handleSaveSession(data: {
   winnings: number;
   venue?: string;
   site?: string;
+  sites?: TournamentSiteEntry[];
   notes?: string;
   tags: string[];
   isSession: boolean;
   sessionCount: number;
+  status: SessionStatus;
 }) {
-  tournamentsStore.addTournament(data);
+  const result = await tournamentsStore.addTournament({
+    ...data,
+    status: data.status,
+    sites: data.sites,
+  });
+
+  if (!result.success) {
+    console.error('Failed to save tournament session:', result.error);
+  }
+
   closeSessionModal();
 }
 </script>

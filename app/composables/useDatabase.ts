@@ -77,12 +77,15 @@ export function dbTournamentToTournament(dbTournament: DbTournament): Tournament
     winnings: dbTournament.winnings,
     venue: dbTournament.venue ?? undefined,
     site: dbTournament.site ?? undefined,
+    sites: dbTournament.sites ?? undefined,
     fieldSize: dbTournament.field_size ?? undefined,
     finishPosition: dbTournament.finish_position ?? undefined,
     cashed: dbTournament.cashed ?? undefined,
     notes: dbTournament.notes ?? undefined,
     tags: dbTournament.tags || [],
     status: dbTournament.status || 'completed',
+    isSession: dbTournament.is_session ?? undefined,
+    sessionCount: dbTournament.session_count ?? undefined,
     createdAt: dbTournament.created_at,
     updatedAt: dbTournament.updated_at,
   };
@@ -102,12 +105,15 @@ export function tournamentToDbTournament(tournament: Omit<Tournament, 'id' | 'cr
     winnings: tournament.winnings,
     venue: tournament.venue ?? null,
     site: tournament.site ?? null,
+    sites: tournament.sites ?? null,
     field_size: tournament.fieldSize ?? null,
     finish_position: tournament.finishPosition ?? null,
     cashed: tournament.cashed ?? null,
     notes: tournament.notes ?? null,
     tags: tournament.tags || [],
     status: tournament.status || 'completed',
+    is_session: tournament.isSession ?? null,
+    session_count: tournament.sessionCount ?? null,
   };
 }
 
@@ -354,6 +360,9 @@ export function useDatabase() {
     }
     if (updates.status !== undefined) {
       dbUpdates.status = updates.status;
+    }
+    if (updates.sites !== undefined) {
+      dbUpdates.sites = updates.sites;
     }
 
     const { data, error } = await supabase

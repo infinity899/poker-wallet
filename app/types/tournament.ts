@@ -1,5 +1,14 @@
 import type { Currency, SessionStatus, SessionType } from './session';
 
+export interface TournamentSiteEntry {
+  name: string; // site or venue name
+  buyIn?: number;
+  fee?: number;
+  entries?: number; // re-entries at this site
+  bankrollInitial?: number; // starting bankroll at this site
+  bankrollFinal?: number; // ending bankroll at this site
+}
+
 export interface Tournament {
   id: string;
   userId?: string; // for community aggregation
@@ -12,8 +21,9 @@ export interface Tournament {
   entries: number; // 0 = single entry, 1+ = re-entries/re-buys
   winnings: number; // total prize won (0 if busted)
   name: string;
-  venue?: string; // for live tournaments
-  site?: string; // for online tournaments
+  venue?: string; // for live tournaments (primary venue)
+  site?: string; // for online tournaments (primary site)
+  sites?: TournamentSiteEntry[]; // additional sites/venues for multi-site sessions
   fieldSize?: number;
   finishPosition?: number;
   cashed?: boolean; // explicit ITM flag (winnings > 0 doesn't always mean ITM with bounties)

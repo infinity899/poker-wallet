@@ -115,7 +115,7 @@ export const useTournamentsStore = defineStore('tournaments', () => {
 
   const sortedTournaments = computed(() => {
     return [...filteredTournaments.value].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
   });
 
@@ -333,9 +333,16 @@ export const useTournamentsStore = defineStore('tournaments', () => {
   }
 
   // Helper to calculate profit for a tournament
-  function getTournamentProfit(tournament: Tournament): number {
-    const totalCost = (tournament.buyIn + tournament.fee) * (tournament.entries + 1);
-    return tournament.winnings - totalCost;
+  function getTournamentProfit(t: Tournament): number {
+    // For sessions, calculate profit from bankroll data in sites array
+    if (t.isSession && t.sites && t.sites.length > 0) {
+      const totalInitial = t.sites.reduce((sum, site) => sum + (site.bankrollInitial || 0), 0);
+      const totalFinal = t.sites.reduce((sum, site) => sum + (site.bankrollFinal || 0), 0);
+      return totalFinal - totalInitial;
+    }
+    // For single tournaments, use standard formula
+    const totalCost = (t.buyIn + t.fee) * (t.entries + 1);
+    return t.winnings - totalCost;
   }
 
   return {

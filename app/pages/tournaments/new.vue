@@ -53,74 +53,54 @@
           </p>
         </div>
 
-        <!-- Currency & Venue/Site -->
-        <div class="grid grid-cols-2 gap-4">
+        <!-- Currency -->
+        <div>
+          <label class="label">Currency</label>
+          <select v-model="form.currency" class="input max-w-32">
+            <option v-for="currency in referenceStore.currencies" :key="currency" :value="currency">
+              {{ currency }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Site/Venue with Buy-in/Fee -->
+        <div class="grid grid-cols-[1fr,auto,auto] gap-3 items-end">
           <div>
-            <label class="label">Currency</label>
-            <select v-model="form.currency" class="input">
-              <option v-for="currency in referenceStore.currencies" :key="currency" :value="currency">
-                {{ currency }}
-              </option>
-            </select>
-          </div>
-          <div>
-            <label class="label">
-              {{ form.type === 'live' ? 'Venue' : 'Site' }}
-            </label>
-            <select
-              v-if="form.type === 'live'"
-              v-model="form.venue"
-              class="input"
-            >
+            <label class="label">{{ form.type === 'live' ? 'Venue' : 'Site' }}</label>
+            <select v-model="form.venue" class="input">
               <option value="">
-                Select venue
+                Select {{ form.type === 'live' ? 'venue' : 'site' }}
               </option>
               <option v-for="venue in venues" :key="venue.id" :value="venue.name">
                 {{ venue.name }}
               </option>
             </select>
-            <select
-              v-else
-              v-model="form.site"
-              class="input"
-            >
-              <option value="">
-                Select site
-              </option>
-              <option v-for="site in venues" :key="site.id" :value="site.name">
-                {{ site.name }}
-              </option>
-            </select>
           </div>
-        </div>
-
-        <!-- Buy-in & Fee -->
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="label">Buy-in ($)</label>
+          <div class="w-24">
+            <label class="label">Buy-in</label>
             <input
               v-model.number="form.buyIn"
               type="number"
+              step="1"
               min="0"
-              class="input font-mono"
-              :class="{ 'input-error': errors.buyIn }"
+              placeholder="0"
+              class="input font-mono text-sm"
             >
-            <p v-if="errors.buyIn" class="mt-1 text-xs text-danger-600 dark:text-danger-400">
-              {{ errors.buyIn }}
-            </p>
           </div>
-          <div>
-            <label class="label">Fee ($)</label>
+          <div class="w-24">
+            <label class="label">Fee</label>
             <input
               v-model.number="form.fee"
               type="number"
+              step="1"
               min="0"
-              class="input font-mono"
+              placeholder="0"
+              class="input font-mono text-sm"
             >
           </div>
         </div>
 
-        <!-- Entries & Winnings -->
+        <!-- Re-entries & Winnings -->
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="label">Re-entries</label>
@@ -148,7 +128,7 @@
         <!-- Field Size & Finish -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="label">Field Size</label>
+            <label class="label">Field Size <span class="text-foreground-muted dark:text-foreground-dark-muted font-normal">(optional)</span></label>
             <input
               v-model.number="form.fieldSize"
               type="number"
@@ -217,10 +197,7 @@
         <NuxtLink to="/tournaments" class="btn-secondary flex-1">
           Cancel
         </NuxtLink>
-        <button v-if="isInProgress" type="submit" class="btn-primary flex-1">
-          Start Tournament
-        </button>
-        <button v-else type="submit" class="btn-primary flex-1">
+        <button type="submit" class="btn-primary flex-1">
           Save Tournament
         </button>
       </div>
@@ -229,7 +206,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Currency, SessionStatus, SessionType } from '~/types';
+import type { Currency, SessionType } from '~/types';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 
 const tournamentsStore = useTournamentsStore();
@@ -242,12 +219,11 @@ const form = reactive({
   type: 'online' as SessionType,
   currency: 'USD' as Currency,
   name: '',
+  venue: '',
   buyIn: 0,
   fee: 0,
   entries: 0,
   winnings: 0,
-  venue: '',
-  site: '',
   fieldSize: undefined as number | undefined,
   finishPosition: undefined as number | undefined,
   cashed: false,
@@ -258,32 +234,20 @@ const form = reactive({
 
 const errors = reactive<Record<string, string>>({});
 
-// Tournament is in-progress if no finish position is set
-const isInProgress = computed(() => {
-  return form.finishPosition === undefined || form.finishPosition === null;
-});
-
 function validate() {
   errors.name = '';
-  errors.buyIn = '';
 
   if (!form.name.trim()) {
     errors.name = 'Tournament name is required';
   }
 
-  if (form.buyIn < 0) {
-    errors.buyIn = 'Buy-in must be positive';
-  }
-
-  return !errors.name && !errors.buyIn;
+  return !errors.name;
 }
 
 async function handleSubmit() {
   if (!validate()) {
     return;
   }
-
-  const status: SessionStatus = isInProgress.value ? 'in_progress' : 'completed';
 
   const result = await tournamentsStore.addTournament({
     date: form.date,
@@ -294,14 +258,14 @@ async function handleSubmit() {
     fee: form.fee,
     entries: form.entries,
     winnings: form.winnings,
-    venue: form.type === 'live' ? form.venue : undefined,
-    site: form.type === 'online' ? form.site : undefined,
+    venue: form.type === 'live' ? form.venue || undefined : undefined,
+    site: form.type === 'online' ? form.venue || undefined : undefined,
     fieldSize: form.fieldSize,
     finishPosition: form.finishPosition,
     cashed: form.cashed,
     notes: form.notes || undefined,
     tags: form.tags,
-    status,
+    status: 'completed',
   });
 
   // Link tournament to selected communities
