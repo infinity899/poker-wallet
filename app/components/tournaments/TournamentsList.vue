@@ -35,6 +35,7 @@ import type { Currency, SessionStatus, SessionType } from '~/types';
 import type { TournamentSiteEntry } from '~/types/tournament';
 
 const tournamentsStore = useTournamentsStore();
+const communitiesStore = useCommunitiesStore();
 const { isMobile } = useBreakpoint();
 
 const deleteConfirmId = ref<string | null>(null);
@@ -80,6 +81,7 @@ async function handleSaveSession(data: {
   isSession: boolean;
   sessionCount: number;
   status: SessionStatus;
+  communityIds: string[];
 }) {
   const result = await tournamentsStore.addTournament({
     ...data,
@@ -89,6 +91,11 @@ async function handleSaveSession(data: {
 
   if (!result.success) {
     console.error('Failed to save tournament session:', result.error);
+  }
+
+  // Link tournament to selected communities
+  if (result.success && data.communityIds.length > 0) {
+    await communitiesStore.updateTournamentCommunities(result.data.id, data.communityIds);
   }
 
   closeSessionModal();

@@ -64,7 +64,7 @@ function handleFabAction(action: string) {
   }
 }
 
-function handleSaveTournamentSession(data: {
+async function handleSaveTournamentSession(data: {
   date: string;
   type: SessionType;
   currency: Currency;
@@ -79,8 +79,15 @@ function handleSaveTournamentSession(data: {
   tags: string[];
   isSession: boolean;
   sessionCount: number;
+  communityIds: string[];
 }) {
-  tournamentsStore.addTournament(data);
+  const result = await tournamentsStore.addTournament(data);
+
+  // Link tournament to selected communities
+  if (result.success && data.communityIds.length > 0) {
+    await communitiesStore.updateTournamentCommunities(result.data.id, data.communityIds);
+  }
+
   showTournamentSessionModal.value = false;
 }
 

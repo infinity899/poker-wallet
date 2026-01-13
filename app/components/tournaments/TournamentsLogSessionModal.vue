@@ -195,6 +195,9 @@
               />
             </div>
 
+            <!-- Communities -->
+            <CommunitiesSelector v-model="form.communityIds" />
+
             <div class="flex gap-3 pt-1">
               <button type="button" class="btn-secondary flex-1" @click="emit('close')">
                 Cancel
@@ -242,6 +245,7 @@ const emit = defineEmits<{
     isSession: boolean;
     sessionCount: number;
     status: SessionStatus;
+    communityIds: string[];
   }];
 }>();
 
@@ -268,6 +272,7 @@ const form = reactive({
   name: '',
   sessionCount: 1,
   notes: '',
+  communityIds: [] as string[],
 });
 
 function updateDefaultName() {
@@ -326,6 +331,7 @@ watch(() => props.isOpen, (isOpen) => {
     form.name = getDefaultName(today);
     form.sessionCount = 1;
     form.notes = '';
+    form.communityIds = [];
     siteEntries.value = [{ name: '', bankrollInitial: null, bankrollFinal: null }];
     errors.sessionCount = '';
   }
@@ -381,6 +387,7 @@ function handleSubmit() {
     isSession: true,
     sessionCount: form.sessionCount,
     status,
+    communityIds: form.communityIds,
   });
 }
 </script>
