@@ -398,7 +398,9 @@ function validate() {
     errors.stake = 'Enter valid stakes (e.g., 1/2)';
   }
 
-  if (form.duration < 1) {
+  // Duration only required when completing the session (not for in-progress updates)
+  const willStayInProgress = isCurrentlyInProgress.value && !willBeCompleted.value;
+  if (!willStayInProgress && form.duration < 1) {
     errors.duration = 'Duration must be at least 1 minute';
   }
 
