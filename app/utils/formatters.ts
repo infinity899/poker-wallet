@@ -1,12 +1,16 @@
 import type { Currency } from '~/types';
 
-const _currencySymbols: Record<Currency, string> = {
+const currencySymbols: Record<Currency, string> = {
   USD: '$',
   EUR: '\u20AC',
   GBP: '\u00A3',
   CAD: 'C$',
   RON: 'lei',
 };
+
+export function getCurrencySymbol(currency: Currency): string {
+  return currencySymbols[currency];
+}
 
 const currencyLocales: Record<Currency, string> = {
   USD: 'en-US',
@@ -36,8 +40,17 @@ export function formatProfit(amount: number, currency: Currency = 'USD'): string
   return formatted;
 }
 
-export function formatProfitShort(amount: number): string {
+const currencySymbolsShort: Record<Currency, string> = {
+  USD: '$',
+  EUR: '\u20AC',
+  GBP: '\u00A3',
+  CAD: 'C$',
+  RON: 'L',
+};
+
+export function formatProfitShort(amount: number, currency: Currency = 'USD'): string {
   const absAmount = Math.abs(amount);
+  const symbol = currencySymbolsShort[currency];
   let formatted: string;
 
   if (absAmount >= 1000000) {
@@ -51,12 +64,12 @@ export function formatProfitShort(amount: number): string {
   }
 
   if (amount > 0) {
-    return `+$${formatted}`;
+    return `+${symbol}${formatted}`;
   }
   if (amount < 0) {
-    return `-$${formatted}`;
+    return `-${symbol}${formatted}`;
   }
-  return `$${formatted}`;
+  return `${symbol}${formatted}`;
 }
 
 export function formatDuration(minutes: number): string {

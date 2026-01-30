@@ -54,9 +54,14 @@
 
 <script setup lang="ts">
 import type { CashSession } from '~/types';
-import { formatDuration, formatProfit } from '~/utils/formatters';
+import { formatDuration } from '~/utils/formatters';
 
 defineProps<{
   sessions: CashSession[];
 }>();
+
+const { formatDisplayProfit } = useCurrency();
+
+// Wrapper to format profit (values are in USD from store)
+const formatProfit = (amount: number) => formatDisplayProfit(amount);
 </script>

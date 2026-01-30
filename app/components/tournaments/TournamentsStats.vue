@@ -43,9 +43,15 @@
 
 <script setup lang="ts">
 import type { TournamentStats } from '~/types';
-import { formatCurrency, formatPercentage, formatProfit } from '~/utils/formatters';
+import { formatPercentage } from '~/utils/formatters';
 
 defineProps<{
   stats: TournamentStats;
 }>();
+
+const { formatAmount, formatDisplayProfit } = useCurrency();
+
+// Wrapper to format currency (values are in USD from store)
+const formatCurrency = (amount: number) => formatAmount(amount);
+const formatProfit = (amount: number) => formatDisplayProfit(amount);
 </script>

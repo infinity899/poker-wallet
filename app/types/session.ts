@@ -17,12 +17,12 @@ export interface CashSession {
   startTime?: string; // HH:mm
   endTime?: string; // HH:mm
   type: SessionType;
-  currency: Currency;
+  currency: Currency; // display currency (legacy, kept for backwards compat)
   stake: string; // e.g., "1/2", "2/5"
   smallBlind: number;
   bigBlind: number;
   game: GameType;
-  result: number; // profit/loss (signed)
+  result: number; // profit/loss in USD (signed)
   duration: number; // minutes
   location?: string; // for live sessions (primary venue)
   site?: string; // for online sessions (primary site)
@@ -34,6 +34,10 @@ export interface CashSession {
   notes?: string;
   tags: string[];
   status: SessionStatus; // in_progress or completed
+  // Currency exchange fields
+  originalCurrency?: Currency; // currency user entered the result in
+  originalResult?: number; // result in original currency
+  exchangeRate?: number; // USD rate at time of recording (1 originalCurrency = X USD)
   createdAt: string;
   updatedAt: string;
 }

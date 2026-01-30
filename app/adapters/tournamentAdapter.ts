@@ -88,6 +88,21 @@ export function createTournamentAdapter(
       if (tournament.sessionCount !== undefined) {
         result.session_count = tournament.sessionCount;
       }
+      if (tournament.originalCurrency !== undefined) {
+        result.original_currency = tournament.originalCurrency;
+      }
+      if (tournament.originalBuyIn !== undefined) {
+        result.original_buy_in = tournament.originalBuyIn;
+      }
+      if (tournament.originalFee !== undefined) {
+        result.original_fee = tournament.originalFee;
+      }
+      if (tournament.originalWinnings !== undefined) {
+        result.original_winnings = tournament.originalWinnings;
+      }
+      if (tournament.exchangeRate !== undefined) {
+        result.exchange_rate = tournament.exchangeRate;
+      }
 
       return result as Partial<DbTournament>;
     },

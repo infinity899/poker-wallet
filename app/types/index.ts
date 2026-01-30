@@ -1,5 +1,6 @@
 export * from './community';
 export * from './database.types';
+export * from './exchange';
 export * from './filters';
 export * from './reference';
 export * from './result';

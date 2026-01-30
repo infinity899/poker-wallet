@@ -103,7 +103,7 @@
                   <!-- Bankroll row -->
                   <div class="grid grid-cols-2 gap-2">
                     <div>
-                      <label class="label text-xs">Bankroll Initial</label>
+                      <label class="label text-xs">Initial ({{ getCurrencySymbol(form.currency) }})</label>
                       <input
                         v-model.number="entry.bankrollInitial"
                         type="number"
@@ -114,7 +114,7 @@
                       >
                     </div>
                     <div>
-                      <label class="label text-xs">Bankroll Final</label>
+                      <label class="label text-xs">Final ({{ getCurrencySymbol(form.currency) }})</label>
                       <input
                         v-model.number="entry.bankrollFinal"
                         type="number"
@@ -220,7 +220,7 @@
 import type { Currency, SessionStatus, SessionType } from '~/types';
 import type { TournamentSiteEntry } from '~/types/tournament';
 import { PlusIcon, TrashIcon } from '@heroicons/vue/24/outline';
-import { formatCurrency, formatDate } from '~/utils/formatters';
+import { formatCurrency, formatDate, getCurrencySymbol } from '~/utils/formatters';
 
 const props = defineProps<{
   isOpen: boolean;

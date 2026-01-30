@@ -17,7 +17,7 @@
             </p>
             <p class="text-sm text-foreground-muted dark:text-foreground-dark-muted">
               {{ formatDate(tournament.date) }}<template v-if="!tournament.isSession">
-                &middot; {{ formatCurrency(tournament.buyIn + tournament.fee) }}
+                &middot; {{ formatTournamentCurrency((tournament.originalBuyIn ?? tournament.buyIn) + (tournament.originalFee ?? tournament.fee), tournament) }}
               </template>
             </p>
           </div>
@@ -28,7 +28,7 @@
                 ? 'text-foreground-muted dark:text-foreground-dark-muted'
                 : getTournamentProfit(tournament) >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
             >
-              {{ tournament.status === 'in_progress' ? '-' : formatProfit(getTournamentProfit(tournament)) }}
+              {{ tournament.status === 'in_progress' ? '-' : formatTournamentProfit(getOriginalTournamentProfit(tournament), tournament) }}
             </p>
             <p v-if="tournament.status === 'in_progress'" class="text-xs text-amber-600 dark:text-amber-400">
               In Progress
@@ -97,13 +97,13 @@
               </span>
               <div class="flex gap-3 items-center font-mono text-sm">
                 <span class="text-foreground-muted dark:text-foreground-dark-muted">
-                  {{ site.bankrollInitial ? formatCurrency(site.bankrollInitial) : '-' }} → {{ site.bankrollFinal ? formatCurrency(site.bankrollFinal) : '-' }}
+                  {{ site.bankrollInitial ? formatTournamentCurrency(site.bankrollInitial, tournament) : '-' }} → {{ site.bankrollFinal ? formatTournamentCurrency(site.bankrollFinal, tournament) : '-' }}
                 </span>
                 <span
                   class="font-medium"
                   :class="getSiteProfit(site) >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
                 >
-                  {{ formatProfit(getSiteProfit(site)) }}
+                  {{ formatTournamentProfit(getSiteProfit(site), tournament) }}
                 </span>
               </div>
             </div>
@@ -120,8 +120,8 @@
                 {{ site.name || 'Unknown' }}
               </span>
               <div class="flex gap-4 text-foreground-muted dark:text-foreground-dark-muted font-mono">
-                <span>{{ site.buyIn ? formatCurrency(site.buyIn) : '-' }}</span>
-                <span class="text-foreground-muted/50 dark:text-foreground-dark-muted/50">+{{ site.fee ? formatCurrency(site.fee) : '-' }}</span>
+                <span>{{ site.buyIn ? formatTournamentCurrency(site.buyIn, tournament) : '-' }}</span>
+                <span class="text-foreground-muted/50 dark:text-foreground-dark-muted/50">+{{ site.fee ? formatTournamentCurrency(site.fee, tournament) : '-' }}</span>
               </div>
             </div>
           </template>
@@ -142,11 +142,40 @@
 import type { Tournament } from '~/types';
 import type { TournamentSiteEntry } from '~/types/tournament';
 import { CheckIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
-import { formatCurrency, formatDate, formatPosition, formatProfit } from '~/utils/formatters';
+import { formatCurrency as formatCurrencyUtil, formatDate, formatPosition, formatProfit as formatProfitUtil } from '~/utils/formatters';
 
 defineProps<{
   tournaments: Tournament[];
 }>();
+
+// Format in the tournament's original currency
+function formatTournamentCurrency(amount: number, tournament: Tournament): string {
+  const currency = tournament.originalCurrency || tournament.currency;
+  return formatCurrencyUtil(amount, currency);
+}
+
+function formatTournamentProfit(amount: number, tournament: Tournament): string {
+  const currency = tournament.originalCurrency || tournament.currency;
+  return formatProfitUtil(amount, currency);
+}
+
+// Get profit in original currency for display
+function getOriginalTournamentProfit(tournament: Tournament): number {
+  if (tournament.isSession) {
+    if (tournament.sites) {
+      return tournament.sites.reduce((sum, site) => {
+        return sum + ((site.bankrollFinal || 0) - (site.bankrollInitial || 0));
+      }, 0);
+    }
+    return 0;
+  }
+
+  const buyIn = tournament.originalBuyIn ?? tournament.buyIn;
+  const fee = tournament.originalFee ?? tournament.fee;
+  const winnings = tournament.originalWinnings ?? tournament.winnings;
+  const totalBuyIn = (buyIn + fee) * (tournament.entries + 1);
+  return winnings - totalBuyIn;
+}
 
 const tournamentsStore = useTournamentsStore();
 

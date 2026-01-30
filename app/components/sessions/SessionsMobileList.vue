@@ -26,9 +26,9 @@
               class="text-base font-semibold data-value"
               :class="session.status === 'in_progress'
                 ? 'text-foreground-muted dark:text-foreground-dark-muted'
-                : session.result >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
+                : (session.originalResult ?? session.result) >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
             >
-              {{ session.status === 'in_progress' ? 'In Progress' : formatProfit(session.result) }}
+              {{ session.status === 'in_progress' ? 'In Progress' : formatSessionProfit(session) }}
             </p>
             <ChevronDownIcon
               class="w-4 h-4 text-foreground-muted dark:text-foreground-dark-muted transition-transform"
@@ -72,9 +72,9 @@
             class="text-base font-semibold data-value shrink-0 ml-3"
             :class="session.status === 'in_progress'
               ? 'text-foreground-muted dark:text-foreground-dark-muted'
-              : session.result >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
+              : (session.originalResult ?? session.result) >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
           >
-            {{ session.status === 'in_progress' ? 'In Progress' : formatProfit(session.result) }}
+            {{ session.status === 'in_progress' ? 'In Progress' : formatSessionProfit(session) }}
           </p>
         </div>
         <div class="flex gap-3 text-xs text-foreground-muted dark:text-foreground-dark-muted">
@@ -107,16 +107,16 @@
             <span class="text-foreground dark:text-foreground-dark">{{ site.name || 'Unknown' }}</span>
             <div class="flex gap-4 text-xs font-mono">
               <span class="text-foreground-muted dark:text-foreground-dark-muted">
-                {{ site.cashIn ? formatCurrency(site.cashIn) : '-' }}
+                {{ site.cashIn ? formatSiteCurrency(site.cashIn, session) : '-' }}
               </span>
               <span class="text-foreground-muted dark:text-foreground-dark-muted">
-                {{ site.cashOut ? formatCurrency(site.cashOut) : '-' }}
+                {{ site.cashOut ? formatSiteCurrency(site.cashOut, session) : '-' }}
               </span>
               <span
                 class="font-medium w-16 text-right"
                 :class="getSiteProfit(site) >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
               >
-                {{ site.cashIn && site.cashOut ? formatProfit(getSiteProfit(site)) : '-' }}
+                {{ site.cashIn && site.cashOut ? formatSiteProfit(site, session) : '-' }}
               </span>
             </div>
           </div>
@@ -145,11 +145,30 @@
 <script setup lang="ts">
 import type { CashSession, SiteEntry } from '~/types';
 import { ChevronDownIcon } from '@heroicons/vue/24/outline';
-import { formatCurrency, formatDate, formatDuration, formatProfit } from '~/utils/formatters';
+import { formatCurrency as formatCurrencyUtil, formatDate, formatDuration, formatProfit as formatProfitUtil } from '~/utils/formatters';
 
 defineProps<{
   sessions: CashSession[];
 }>();
+
+// Format in the session's original currency
+function formatSessionProfit(session: CashSession): string {
+  const currency = session.originalCurrency || session.currency;
+  const amount = session.originalResult ?? session.result;
+  return formatProfitUtil(amount, currency);
+}
+
+// Format site amounts in session's original currency
+function formatSiteCurrency(amount: number, session: CashSession): string {
+  const currency = session.originalCurrency || session.currency;
+  return formatCurrencyUtil(amount, currency);
+}
+
+function formatSiteProfit(site: SiteEntry, session: CashSession): string {
+  const currency = session.originalCurrency || session.currency;
+  const profit = (site.cashOut || 0) - (site.cashIn || 0);
+  return formatProfitUtil(profit, currency);
+}
 
 const expandedRows = ref<Set<string>>(new Set());
 

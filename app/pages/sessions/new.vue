@@ -115,7 +115,7 @@
                 </select>
               </div>
               <div class="w-24">
-                <label v-if="index === 0" class="label text-xs">Cash In</label>
+                <label v-if="index === 0" class="label text-xs">Cash In ({{ getCurrencySymbol(form.currency) }})</label>
                 <input
                   v-model.number="entry.cashIn"
                   type="number"
@@ -127,7 +127,7 @@
                 >
               </div>
               <div class="w-24">
-                <label v-if="index === 0" class="label text-xs">Cash Out</label>
+                <label v-if="index === 0" class="label text-xs">Cash Out ({{ getCurrencySymbol(form.currency) }})</label>
                 <input
                   v-model.number="entry.cashOut"
                   type="number"
@@ -170,7 +170,7 @@
         <!-- Result & Duration -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="label">Result ($) <span v-if="!isInProgress" class="text-foreground-muted dark:text-foreground-dark-muted font-normal">(optional for in-progress)</span></label>
+            <label class="label">Result ({{ getCurrencySymbol(form.currency) }}) <span v-if="!isInProgress" class="text-foreground-muted dark:text-foreground-dark-muted font-normal">(optional for in-progress)</span></label>
             <input
               v-model.number="form.result"
               type="number"
@@ -246,6 +246,7 @@
 <script setup lang="ts">
 import type { Currency, GameType, SessionStatus, SessionType, SiteEntry } from '~/types';
 import { ArrowLeftIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline';
+import { getCurrencySymbol } from '~/utils/formatters';
 
 interface FormSiteEntry {
   name: string;
@@ -255,6 +256,7 @@ interface FormSiteEntry {
 
 const sessionsStore = useSessionsStore();
 const referenceStore = useReferenceStore();
+const currencyStore = useCurrencyStore();
 const router = useRouter();
 
 // Get current time in HH:mm format
@@ -360,6 +362,10 @@ async function handleSubmit() {
       cashOut: entry.cashOut ?? undefined,
     }));
 
+  // Convert result to USD for storage
+  const exchangeRate = currencyStore.getCurrentRate(form.currency);
+  const usdResult = currencyStore.toUSD(form.result, form.currency);
+
   const result = await sessionsStore.addSession({
     date: form.date,
     startTime: form.startTime || undefined,
@@ -369,7 +375,7 @@ async function handleSubmit() {
     stake: form.stake,
     smallBlind: 0,
     bigBlind: 0,
-    result: form.result,
+    result: usdResult,
     duration: form.duration,
     location: form.type === 'live' ? primaryName : undefined,
     site: form.type === 'online' ? primaryName : undefined,
@@ -379,6 +385,10 @@ async function handleSubmit() {
     notes: form.notes || undefined,
     tags: form.tags,
     status,
+    // Original currency values for reference
+    originalCurrency: form.currency,
+    originalResult: form.result,
+    exchangeRate,
   });
 
   // Link session to selected communities

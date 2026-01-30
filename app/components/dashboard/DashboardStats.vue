@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { formatCurrency, formatPercentage, formatProfit } from '~/utils/formatters';
+import { formatPercentage } from '~/utils/formatters';
 
 defineProps<{
   totalProfit: number;
@@ -53,4 +53,10 @@ defineProps<{
   winRate: number;
   hourlyRate: number;
 }>();
+
+const { formatAmount, formatDisplayProfit } = useCurrency();
+
+// Wrapper to format profit (values passed are already in USD)
+const formatProfit = (amount: number) => formatDisplayProfit(amount);
+const formatCurrency = (amount: number) => formatAmount(amount);
 </script>

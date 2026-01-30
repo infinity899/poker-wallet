@@ -22,6 +22,14 @@ export default defineNuxtConfig({
     },
   },
 
+  // Runtime config
+  // Note: Set NUXT_PUBLIC_EXCHANGE_RATE_API_KEY in your .env file
+  runtimeConfig: {
+    public: {
+      exchangeRateApiKey: '',
+    },
+  },
+
   // App configuration
   app: {
     head: {

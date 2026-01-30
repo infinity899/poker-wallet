@@ -94,18 +94,18 @@
                 {{ formatDuration(session.duration) }}
               </td>
               <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-mono text-foreground-muted dark:text-foreground-dark-muted">
-                {{ session.buyInTotal ? formatCurrency(session.buyInTotal) : '-' }}
+                {{ session.buyInTotal ? formatSessionCurrency(session.buyInTotal, session) : '-' }}
               </td>
               <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-mono text-foreground-muted dark:text-foreground-dark-muted">
-                {{ session.cashOutTotal ? formatCurrency(session.cashOutTotal) : '-' }}
+                {{ session.cashOutTotal ? formatSessionCurrency(session.cashOutTotal, session) : '-' }}
               </td>
               <td
                 class="px-4 py-3 whitespace-nowrap text-sm text-right font-semibold data-value"
                 :class="session.status === 'in_progress'
                   ? 'text-foreground-muted dark:text-foreground-dark-muted'
-                  : session.result >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
+                  : (session.originalResult ?? session.result) >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
               >
-                {{ session.status === 'in_progress' ? '-' : formatProfit(session.result) }}
+                {{ session.status === 'in_progress' ? '-' : formatSessionProfit(session) }}
               </td>
               <td class="px-4 py-3 whitespace-nowrap text-right text-sm" @click.stop>
                 <div class="flex gap-2 justify-end">
@@ -155,16 +155,16 @@
                       {{ site.name || 'Unknown' }}
                     </div>
                     <div class="w-24 text-right font-mono text-foreground-muted dark:text-foreground-dark-muted">
-                      {{ site.cashIn ? formatCurrency(site.cashIn) : '-' }}
+                      {{ site.cashIn ? formatSiteCurrency(site.cashIn, session) : '-' }}
                     </div>
                     <div class="w-24 text-right font-mono text-foreground-muted dark:text-foreground-dark-muted">
-                      {{ site.cashOut ? formatCurrency(site.cashOut) : '-' }}
+                      {{ site.cashOut ? formatSiteCurrency(site.cashOut, session) : '-' }}
                     </div>
                     <div
                       class="w-24 text-right font-mono font-medium"
                       :class="getSiteProfit(site) >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
                     >
-                      {{ site.cashIn && site.cashOut ? formatProfit(getSiteProfit(site)) : '-' }}
+                      {{ site.cashIn && site.cashOut ? formatSiteProfit(site, session) : '-' }}
                     </div>
                   </div>
                 </div>
@@ -189,7 +189,7 @@
 <script setup lang="ts">
 import type { CashSession, SiteEntry } from '~/types';
 import { CheckIcon, ChevronDownIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
-import { formatCurrency, formatDate, formatDuration, formatProfit } from '~/utils/formatters';
+import { formatCurrency as formatCurrencyUtil, formatDate, formatDuration, formatProfit as formatProfitUtil } from '~/utils/formatters';
 
 defineProps<{
   sessions: CashSession[];
@@ -198,6 +198,31 @@ defineProps<{
 const emit = defineEmits<{
   delete: [id: string];
 }>();
+
+// Format in the session's original currency
+function formatSessionCurrency(amount: number, session: CashSession): string {
+  const currency = session.originalCurrency || session.currency;
+  return formatCurrencyUtil(amount, currency);
+}
+
+// Format profit in the session's original currency
+function formatSessionProfit(session: CashSession): string {
+  const currency = session.originalCurrency || session.currency;
+  const amount = session.originalResult ?? session.result;
+  return formatProfitUtil(amount, currency);
+}
+
+// Format site amounts in session's original currency
+function formatSiteCurrency(amount: number, session: CashSession): string {
+  const currency = session.originalCurrency || session.currency;
+  return formatCurrencyUtil(amount, currency);
+}
+
+function formatSiteProfit(site: SiteEntry, session: CashSession): string {
+  const currency = session.originalCurrency || session.currency;
+  const profit = (site.cashOut || 0) - (site.cashIn || 0);
+  return formatProfitUtil(profit, currency);
+}
 
 // Track expanded rows
 const expandedRows = ref<Set<string>>(new Set());

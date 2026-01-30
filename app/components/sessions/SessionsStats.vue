@@ -43,9 +43,14 @@
 
 <script setup lang="ts">
 import type { SessionStats } from '~/types';
-import { formatCurrency, formatProfit } from '~/utils/formatters';
 
 defineProps<{
   stats: SessionStats;
 }>();
+
+const { formatAmount, formatDisplayProfit } = useCurrency();
+
+// Wrapper to format profit (values are in USD from store)
+const formatProfit = (amount: number) => formatDisplayProfit(amount);
+const formatCurrency = (amount: number) => formatAmount(amount);
 </script>

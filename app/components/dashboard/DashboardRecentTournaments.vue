@@ -57,16 +57,20 @@
 
 <script setup lang="ts">
 import type { Tournament } from '~/types';
-import { formatCurrency, formatProfit } from '~/utils/formatters';
 
 defineProps<{
   tournaments: Tournament[];
 }>();
 
 const tournamentsStore = useTournamentsStore();
+const { formatAmount, formatDisplayProfit } = useCurrency();
 
 // Use store's getTournamentProfit for consistency
 const { getTournamentProfit } = tournamentsStore;
+
+// Wrapper to format currency (values are in USD from store)
+const formatCurrency = (amount: number) => formatAmount(amount);
+const formatProfit = (amount: number) => formatDisplayProfit(amount);
 
 function getOrdinal(n: number): string {
   const suffix = n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th';

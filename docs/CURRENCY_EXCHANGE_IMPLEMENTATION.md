@@ -39,9 +39,9 @@ export interface ExchangeRates {
 
 **Modify: `app/types/session.ts`** - Add to CashSession:
 ```typescript
-originalCurrency: Currency;  // Currency user entered
-originalResult: number;       // Result in original currency
-exchangeRate: number;         // Rate used for conversion
+originalCurrency: Currency; // Currency user entered
+originalResult: number; // Result in original currency
+exchangeRate: number; // Rate used for conversion
 // result field now always stores USD
 ```
 
@@ -84,7 +84,7 @@ exchangeRate: number;
 
 **Modify: `app/composables/useDatabase.ts`**
 - Update `dbSessionToSession` and `dbTournamentToTournament` with fallbacks:
-```typescript
+```text
 originalCurrency: db.original_currency ?? db.currency,
 originalResult: db.original_result ?? db.result,
 exchangeRate: db.exchange_rate ?? 1,

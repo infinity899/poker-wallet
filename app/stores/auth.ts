@@ -148,6 +148,32 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Update user settings (generic function for any setting)
+  async function updateSettings(updates: Partial<DbUserSettings>): Promise<void> {
+    const userId = user.value?.sub;
+    if (!userId) {
+      console.error('Cannot update settings: user not authenticated');
+      return;
+    }
+
+    try {
+      const { error } = await (supabase.from('user_settings') as any)
+        .update(updates)
+        .eq('user_id', userId);
+
+      if (error) {
+        throw error;
+      }
+
+      if (settings.value) {
+        Object.assign(settings.value, updates);
+      }
+    }
+    catch (error) {
+      console.error('Failed to update settings:', error);
+    }
+  }
+
   // Clear mock data from localStorage
   function clearMockData() {
     localStorage.removeItem('poker-wallet-sessions');
@@ -230,6 +256,7 @@ export const useAuthStore = defineStore('auth', () => {
     initialize,
     loadUserSettings,
     setDemoMode,
+    updateSettings,
     clearMockData,
     signOut,
     waitForSettings,

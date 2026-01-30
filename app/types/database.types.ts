@@ -27,6 +27,10 @@ export interface DbSession {
   tags: string[];
   sites: { name: string; cashIn?: number; cashOut?: number }[] | null;
   status: 'in_progress' | 'completed';
+  // Currency exchange fields
+  original_currency: 'USD' | 'EUR' | 'GBP' | 'CAD' | 'RON' | null;
+  original_result: number | null;
+  exchange_rate: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -53,6 +57,12 @@ export interface DbTournament {
   status: 'in_progress' | 'completed';
   is_session: boolean | null;
   session_count: number | null;
+  // Currency exchange fields
+  original_currency: 'USD' | 'EUR' | 'GBP' | 'CAD' | 'RON' | null;
+  original_buy_in: number | null;
+  original_fee: number | null;
+  original_winnings: number | null;
+  exchange_rate: number | null;
   created_at: string;
   updated_at: string;
 }

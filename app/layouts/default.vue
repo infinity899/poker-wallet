@@ -54,6 +54,8 @@ const { isMobile, isDesktop } = useBreakpoint();
 const { addAnnouncement, removeAnnouncement } = useAnnouncements();
 const authStore = useAuthStore();
 const tournamentsStore = useTournamentsStore();
+const sessionsStore = useSessionsStore();
+const communitiesStore = useCommunitiesStore();
 const router = useRouter();
 
 const showTournamentSessionModal = ref(false);
@@ -90,9 +92,6 @@ async function handleSaveTournamentSession(data: {
 
   showTournamentSessionModal.value = false;
 }
-
-const sessionsStore = useSessionsStore();
-const communitiesStore = useCommunitiesStore();
 
 async function switchToRealData() {
   await authStore.setDemoMode(false);

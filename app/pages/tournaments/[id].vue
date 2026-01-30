@@ -84,7 +84,7 @@
             </select>
           </div>
           <div class="w-24">
-            <label class="label">Buy-in</label>
+            <label class="label">Buy-in ({{ getCurrencySymbol(form.currency) }})</label>
             <input
               v-model.number="form.buyIn"
               type="number"
@@ -95,7 +95,7 @@
             >
           </div>
           <div class="w-24">
-            <label class="label">Fee</label>
+            <label class="label">Fee ({{ getCurrencySymbol(form.currency) }})</label>
             <input
               v-model.number="form.fee"
               type="number"
@@ -142,7 +142,7 @@
                 </select>
               </div>
               <div class="w-28">
-                <label v-if="index === 0" class="label text-xs">Bankroll Initial</label>
+                <label v-if="index === 0" class="label text-xs">Initial ({{ getCurrencySymbol(form.currency) }})</label>
                 <input
                   v-model.number="entry.bankrollInitial"
                   type="number"
@@ -153,7 +153,7 @@
                 >
               </div>
               <div class="w-28">
-                <label v-if="index === 0" class="label text-xs">Bankroll Final</label>
+                <label v-if="index === 0" class="label text-xs">Final ({{ getCurrencySymbol(form.currency) }})</label>
                 <input
                   v-model.number="entry.bankrollFinal"
                   type="number"
@@ -207,7 +207,7 @@
             </p>
           </div>
           <div>
-            <label class="label">Winnings ($)</label>
+            <label class="label">Winnings ({{ getCurrencySymbol(form.currency) }})</label>
             <input
               v-model.number="form.winnings"
               type="number"
@@ -317,6 +317,7 @@
 import type { Currency, SessionStatus, SessionType } from '~/types';
 import type { TournamentSiteEntry } from '~/types/tournament';
 import { ArrowLeftIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline';
+import { getCurrencySymbol } from '~/utils/formatters';
 
 interface FormSiteEntry {
   name: string;
@@ -329,6 +330,7 @@ interface FormSiteEntry {
 const tournamentsStore = useTournamentsStore();
 const referenceStore = useReferenceStore();
 const communitiesStore = useCommunitiesStore();
+const currencyStore = useCurrencyStore();
 const router = useRouter();
 const route = useRoute();
 
@@ -402,16 +404,22 @@ function getInitialVenue(): string {
   return t.type === 'live' ? (t.venue || '') : (t.site || '');
 }
 
+// Use original currency/values if available (for edit), otherwise fallback
+const initialCurrency = tournament.value?.originalCurrency || tournament.value?.currency || 'USD' as Currency;
+const initialBuyIn = tournament.value?.originalBuyIn ?? tournament.value?.buyIn ?? 0;
+const initialFee = tournament.value?.originalFee ?? tournament.value?.fee ?? 0;
+const initialWinnings = tournament.value?.originalWinnings ?? tournament.value?.winnings ?? 0;
+
 const form = reactive({
   date: tournament.value?.date || '',
   type: tournament.value?.type || 'online' as SessionType,
-  currency: tournament.value?.currency || 'USD' as Currency,
+  currency: initialCurrency,
   name: tournament.value?.name || '',
   venue: getInitialVenue(),
-  buyIn: tournament.value?.buyIn || 0,
-  fee: tournament.value?.fee || 0,
+  buyIn: initialBuyIn,
+  fee: initialFee,
   entries: tournament.value?.entries || 0,
-  winnings: tournament.value?.winnings || 0,
+  winnings: initialWinnings,
   fieldSize: tournament.value?.fieldSize as number | undefined,
   finishPosition: tournament.value?.finishPosition as number | undefined,
   cashed: tournament.value?.cashed || false,
@@ -460,6 +468,9 @@ async function handleSubmit() {
     return;
   }
 
+  // Convert values to USD for storage
+  const exchangeRate = currencyStore.getCurrentRate(form.currency);
+
   if (isSession.value) {
     // For sessions, determine status based on bankroll final
     let newStatus: SessionStatus = tournament.value?.status || 'completed';
@@ -480,6 +491,8 @@ async function handleSubmit() {
         bankrollFinal: entry.bankrollFinal ?? undefined,
       }));
 
+    const usdWinnings = currencyStore.toUSD(totalBankrollFinal.value, form.currency);
+
     await tournamentsStore.updateTournament(tournamentId.value, {
       date: form.date,
       type: form.type,
@@ -488,26 +501,36 @@ async function handleSubmit() {
       buyIn: 0, // Sessions don't track buy-in
       fee: 0, // Sessions don't track fee
       entries: 0,
-      winnings: totalBankrollFinal.value, // Store final bankroll as winnings
+      winnings: usdWinnings, // Store final bankroll as winnings in USD
       venue: form.type === 'live' ? primaryName : undefined,
       site: form.type === 'online' ? primaryName : undefined,
       sites: sites.length > 0 ? sites : undefined,
       notes: form.notes || undefined,
       tags: form.tags,
       status: newStatus,
+      // Original currency values for reference
+      originalCurrency: form.currency,
+      originalBuyIn: 0,
+      originalFee: 0,
+      originalWinnings: totalBankrollFinal.value,
+      exchangeRate,
     });
   }
   else {
     // For single tournaments - always completed, no multi-site
+    const usdBuyIn = currencyStore.toUSD(form.buyIn, form.currency);
+    const usdFee = currencyStore.toUSD(form.fee, form.currency);
+    const usdWinnings = currencyStore.toUSD(form.winnings, form.currency);
+
     await tournamentsStore.updateTournament(tournamentId.value, {
       date: form.date,
       type: form.type,
       currency: form.currency,
       name: form.name,
-      buyIn: form.buyIn,
-      fee: form.fee,
+      buyIn: usdBuyIn,
+      fee: usdFee,
       entries: form.entries,
-      winnings: form.winnings,
+      winnings: usdWinnings,
       venue: form.type === 'live' ? form.venue || undefined : undefined,
       site: form.type === 'online' ? form.venue || undefined : undefined,
       fieldSize: form.fieldSize,
@@ -516,6 +539,12 @@ async function handleSubmit() {
       notes: form.notes || undefined,
       tags: form.tags,
       status: 'completed',
+      // Original currency values for reference
+      originalCurrency: form.currency,
+      originalBuyIn: form.buyIn,
+      originalFee: form.fee,
+      originalWinnings: form.winnings,
+      exchangeRate,
     });
   }
 

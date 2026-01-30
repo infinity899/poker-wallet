@@ -95,6 +95,15 @@ export function createSessionAdapter(
       if (session.status !== undefined) {
         result.status = session.status;
       }
+      if (session.originalCurrency !== undefined) {
+        result.original_currency = session.originalCurrency;
+      }
+      if (session.originalResult !== undefined) {
+        result.original_result = session.originalResult;
+      }
+      if (session.exchangeRate !== undefined) {
+        result.exchange_rate = session.exchangeRate;
+      }
 
       return result as Partial<DbSession>;
     },

@@ -131,7 +131,7 @@
                 </select>
               </div>
               <div class="w-24">
-                <label v-if="index === 0" class="label text-xs">Cash In</label>
+                <label v-if="index === 0" class="label text-xs">Cash In ({{ getCurrencySymbol(form.currency) }})</label>
                 <input
                   v-model.number="entry.cashIn"
                   type="number"
@@ -143,7 +143,7 @@
                 >
               </div>
               <div class="w-24">
-                <label v-if="index === 0" class="label text-xs">Cash Out</label>
+                <label v-if="index === 0" class="label text-xs">Cash Out ({{ getCurrencySymbol(form.currency) }})</label>
                 <input
                   v-model.number="entry.cashOut"
                   type="number"
@@ -186,7 +186,7 @@
         <!-- Result & Duration -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="label">Result ($)</label>
+            <label class="label">Result ({{ getCurrencySymbol(form.currency) }})</label>
             <input
               v-model.number="form.result"
               type="number"
@@ -262,6 +262,7 @@
 import type { Currency, GameType, SessionStatus, SessionType, SiteEntry } from '~/types';
 import { ArrowLeftIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import { calculateDurationFromTimes } from '~/utils/calculations';
+import { getCurrencySymbol } from '~/utils/formatters';
 
 interface FormSiteEntry {
   name: string;
@@ -272,6 +273,7 @@ interface FormSiteEntry {
 const sessionsStore = useSessionsStore();
 const referenceStore = useReferenceStore();
 const communitiesStore = useCommunitiesStore();
+const currencyStore = useCurrencyStore();
 const router = useRouter();
 const route = useRoute();
 
@@ -308,15 +310,19 @@ function initSiteEntries(): FormSiteEntry[] {
   }];
 }
 
+// Use original currency/result if available (for edit), otherwise fallback
+const initialCurrency = session.value?.originalCurrency || session.value?.currency || 'USD' as Currency;
+const initialResult = session.value?.originalResult ?? session.value?.result ?? 0;
+
 const form = reactive({
   date: session.value?.date || '',
   startTime: session.value?.startTime || '',
   endTime: session.value?.endTime || '',
   type: session.value?.type || 'live' as SessionType,
   game: session.value?.game || 'NLH' as GameType,
-  currency: session.value?.currency || 'USD' as Currency,
+  currency: initialCurrency,
   stake: session.value?.stake || '',
-  result: session.value?.result || 0,
+  result: initialResult,
   duration: session.value?.duration || 0,
   notes: session.value?.notes || '',
   tags: session.value?.tags || [] as string[],
@@ -423,6 +429,10 @@ async function handleSubmit() {
       cashOut: entry.cashOut ?? undefined,
     }));
 
+  // Convert result to USD for storage
+  const exchangeRate = currencyStore.getCurrentRate(form.currency);
+  const usdResult = currencyStore.toUSD(form.result, form.currency);
+
   await sessionsStore.updateSession(sessionId.value, {
     date: form.date,
     startTime: form.startTime || undefined,
@@ -431,7 +441,7 @@ async function handleSubmit() {
     game: form.game,
     currency: form.currency,
     stake: form.stake,
-    result: form.result,
+    result: usdResult,
     duration: form.duration,
     location: form.type === 'live' ? primaryName : undefined,
     site: form.type === 'online' ? primaryName : undefined,
@@ -441,6 +451,10 @@ async function handleSubmit() {
     notes: form.notes || undefined,
     tags: form.tags,
     status: newStatus,
+    // Original currency values for reference
+    originalCurrency: form.currency,
+    originalResult: form.result,
+    exchangeRate,
   });
 
   // Update community links

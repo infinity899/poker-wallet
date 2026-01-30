@@ -27,6 +27,10 @@ export function dbSessionToSession(dbSession: DbSession): CashSession {
     tags: dbSession.tags || [],
     sites: dbSession.sites ?? undefined,
     status: dbSession.status || 'completed',
+    // Currency exchange fields with fallbacks for existing data
+    originalCurrency: dbSession.original_currency ?? dbSession.currency,
+    originalResult: dbSession.original_result ?? dbSession.result,
+    exchangeRate: dbSession.exchange_rate ?? 1,
     createdAt: dbSession.created_at,
     updatedAt: dbSession.updated_at,
   };
@@ -59,6 +63,10 @@ export function sessionToDbSession(session: Omit<CashSession, 'id' | 'createdAt'
     tags: session.tags || [],
     sites: session.sites ?? null,
     status: session.status || 'completed',
+    // Currency exchange fields
+    original_currency: session.originalCurrency ?? null,
+    original_result: session.originalResult ?? null,
+    exchange_rate: session.exchangeRate ?? null,
   };
 }
 
@@ -86,6 +94,12 @@ export function dbTournamentToTournament(dbTournament: DbTournament): Tournament
     status: dbTournament.status || 'completed',
     isSession: dbTournament.is_session ?? undefined,
     sessionCount: dbTournament.session_count ?? undefined,
+    // Currency exchange fields with fallbacks for existing data
+    originalCurrency: dbTournament.original_currency ?? dbTournament.currency,
+    originalBuyIn: dbTournament.original_buy_in ?? dbTournament.buy_in,
+    originalFee: dbTournament.original_fee ?? dbTournament.fee,
+    originalWinnings: dbTournament.original_winnings ?? dbTournament.winnings,
+    exchangeRate: dbTournament.exchange_rate ?? 1,
     createdAt: dbTournament.created_at,
     updatedAt: dbTournament.updated_at,
   };
@@ -114,6 +128,12 @@ export function tournamentToDbTournament(tournament: Omit<Tournament, 'id' | 'cr
     status: tournament.status || 'completed',
     is_session: tournament.isSession ?? null,
     session_count: tournament.sessionCount ?? null,
+    // Currency exchange fields
+    original_currency: tournament.originalCurrency ?? null,
+    original_buy_in: tournament.originalBuyIn ?? null,
+    original_fee: tournament.originalFee ?? null,
+    original_winnings: tournament.originalWinnings ?? null,
+    exchange_rate: tournament.exchangeRate ?? null,
   };
 }
 
@@ -234,6 +254,15 @@ export function useDatabase() {
     }
     if (updates.sites !== undefined) {
       dbUpdates.sites = updates.sites;
+    }
+    if (updates.originalCurrency !== undefined) {
+      dbUpdates.original_currency = updates.originalCurrency;
+    }
+    if (updates.originalResult !== undefined) {
+      dbUpdates.original_result = updates.originalResult;
+    }
+    if (updates.exchangeRate !== undefined) {
+      dbUpdates.exchange_rate = updates.exchangeRate;
     }
 
     const { data, error } = await supabase
@@ -363,6 +392,21 @@ export function useDatabase() {
     }
     if (updates.sites !== undefined) {
       dbUpdates.sites = updates.sites;
+    }
+    if (updates.originalCurrency !== undefined) {
+      dbUpdates.original_currency = updates.originalCurrency;
+    }
+    if (updates.originalBuyIn !== undefined) {
+      dbUpdates.original_buy_in = updates.originalBuyIn;
+    }
+    if (updates.originalFee !== undefined) {
+      dbUpdates.original_fee = updates.originalFee;
+    }
+    if (updates.originalWinnings !== undefined) {
+      dbUpdates.original_winnings = updates.originalWinnings;
+    }
+    if (updates.exchangeRate !== undefined) {
+      dbUpdates.exchange_rate = updates.exchangeRate;
     }
 
     const { data, error } = await supabase

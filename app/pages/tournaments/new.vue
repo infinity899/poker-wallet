@@ -77,7 +77,7 @@
             </select>
           </div>
           <div class="w-24">
-            <label class="label">Buy-in</label>
+            <label class="label">Buy-in ({{ getCurrencySymbol(form.currency) }})</label>
             <input
               v-model.number="form.buyIn"
               type="number"
@@ -88,7 +88,7 @@
             >
           </div>
           <div class="w-24">
-            <label class="label">Fee</label>
+            <label class="label">Fee ({{ getCurrencySymbol(form.currency) }})</label>
             <input
               v-model.number="form.fee"
               type="number"
@@ -115,7 +115,7 @@
             </p>
           </div>
           <div>
-            <label class="label">Winnings ($)</label>
+            <label class="label">Winnings ({{ getCurrencySymbol(form.currency) }})</label>
             <input
               v-model.number="form.winnings"
               type="number"
@@ -208,10 +208,12 @@
 <script setup lang="ts">
 import type { Currency, SessionType } from '~/types';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
+import { getCurrencySymbol } from '~/utils/formatters';
 
 const tournamentsStore = useTournamentsStore();
 const referenceStore = useReferenceStore();
 const communitiesStore = useCommunitiesStore();
+const currencyStore = useCurrencyStore();
 const router = useRouter();
 
 const form = reactive({
@@ -249,15 +251,21 @@ async function handleSubmit() {
     return;
   }
 
+  // Convert values to USD for storage
+  const exchangeRate = currencyStore.getCurrentRate(form.currency);
+  const usdBuyIn = currencyStore.toUSD(form.buyIn, form.currency);
+  const usdFee = currencyStore.toUSD(form.fee, form.currency);
+  const usdWinnings = currencyStore.toUSD(form.winnings, form.currency);
+
   const result = await tournamentsStore.addTournament({
     date: form.date,
     type: form.type,
     currency: form.currency,
     name: form.name,
-    buyIn: form.buyIn,
-    fee: form.fee,
+    buyIn: usdBuyIn,
+    fee: usdFee,
     entries: form.entries,
-    winnings: form.winnings,
+    winnings: usdWinnings,
     venue: form.type === 'live' ? form.venue || undefined : undefined,
     site: form.type === 'online' ? form.venue || undefined : undefined,
     fieldSize: form.fieldSize,
@@ -266,6 +274,12 @@ async function handleSubmit() {
     notes: form.notes || undefined,
     tags: form.tags,
     status: 'completed',
+    // Original currency values for reference
+    originalCurrency: form.currency,
+    originalBuyIn: form.buyIn,
+    originalFee: form.fee,
+    originalWinnings: form.winnings,
+    exchangeRate,
   });
 
   // Link tournament to selected communities

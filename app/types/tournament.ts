@@ -15,11 +15,11 @@ export interface Tournament {
   communityId?: string; // linked community for result aggregation
   date: string; // ISO format YYYY-MM-DD
   type: SessionType;
-  currency: Currency;
-  buyIn: number;
-  fee: number; // rake/fees separate from buy-in
+  currency: Currency; // display currency (legacy, kept for backwards compat)
+  buyIn: number; // in USD
+  fee: number; // in USD, rake/fees separate from buy-in
   entries: number; // 0 = single entry, 1+ = re-entries/re-buys
-  winnings: number; // total prize won (0 if busted)
+  winnings: number; // in USD, total prize won (0 if busted)
   name: string;
   venue?: string; // for live tournaments (primary venue)
   site?: string; // for online tournaments (primary site)
@@ -30,6 +30,12 @@ export interface Tournament {
   notes?: string;
   tags: string[];
   status: SessionStatus; // in_progress or completed
+  // Currency exchange fields
+  originalCurrency?: Currency; // currency user entered values in
+  originalBuyIn?: number; // buyIn in original currency
+  originalFee?: number; // fee in original currency
+  originalWinnings?: number; // winnings in original currency
+  exchangeRate?: number; // USD rate at time of recording (1 originalCurrency = X USD)
   createdAt: string;
   updatedAt: string;
   // Session fields (for batch logging multiple tournaments)
