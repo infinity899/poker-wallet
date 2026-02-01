@@ -9,6 +9,7 @@
     <TournamentsMobileList
       v-if="isMobile"
       :tournaments="tournamentsStore.sortedTournaments"
+      @delete="handleDelete"
     />
     <TournamentsTable
       v-else

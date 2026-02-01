@@ -6,6 +6,7 @@
     <SessionsMobileList
       v-if="isMobile"
       :sessions="sessionsStore.sortedSessions"
+      @delete="handleDelete"
     />
     <SessionsTable
       v-else

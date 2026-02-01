@@ -92,6 +92,36 @@
         </div>
       </NuxtLink>
 
+      <!-- Action buttons for single-site sessions -->
+      <div
+        v-if="!hasMultipleSites(session)"
+        class="flex border-t border-border-subtle dark:border-border-dark-subtle"
+      >
+        <NuxtLink
+          v-if="session.status === 'in_progress'"
+          :to="`/sessions/${session.id}`"
+          class="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/30 transition-colors"
+        >
+          <CheckIcon class="w-4 h-4" />
+          Complete
+        </NuxtLink>
+        <NuxtLink
+          :to="`/sessions/${session.id}`"
+          class="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted hover:bg-surface-secondary dark:hover:bg-surface-dark-tertiary transition-colors"
+          :class="{ 'border-l border-border-subtle dark:border-border-dark-subtle': session.status === 'in_progress' }"
+        >
+          <PencilIcon class="w-4 h-4" />
+          Edit
+        </NuxtLink>
+        <button
+          class="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-danger-500 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/30 transition-colors border-l border-border-subtle dark:border-border-dark-subtle"
+          @click="emit('delete', session.id)"
+        >
+          <TrashIcon class="w-4 h-4" />
+          Delete
+        </button>
+      </div>
+
       <!-- Expanded site breakdown -->
       <div
         v-if="expandedRows.has(session.id) && session.sites"
@@ -121,13 +151,32 @@
             </div>
           </div>
         </div>
-        <!-- Edit link -->
-        <NuxtLink
-          :to="`/sessions/${session.id}`"
-          class="block w-full px-4 py-2 text-center text-xs text-primary-600 dark:text-primary-400 bg-surface-secondary/30 dark:bg-surface-dark-tertiary/30 hover:bg-surface-secondary dark:hover:bg-surface-dark-tertiary transition-colors"
-        >
-          Edit session
-        </NuxtLink>
+        <!-- Action buttons for multi-site sessions -->
+        <div class="flex border-t border-border-subtle dark:border-border-dark-subtle">
+          <NuxtLink
+            v-if="session.status === 'in_progress'"
+            :to="`/sessions/${session.id}`"
+            class="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/30 transition-colors"
+          >
+            <CheckIcon class="w-4 h-4" />
+            Complete
+          </NuxtLink>
+          <NuxtLink
+            :to="`/sessions/${session.id}`"
+            class="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted hover:bg-surface-secondary dark:hover:bg-surface-dark-tertiary transition-colors"
+            :class="{ 'border-l border-border-subtle dark:border-border-dark-subtle': session.status === 'in_progress' }"
+          >
+            <PencilIcon class="w-4 h-4" />
+            Edit
+          </NuxtLink>
+          <button
+            class="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-danger-500 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/30 transition-colors border-l border-border-subtle dark:border-border-dark-subtle"
+            @click="emit('delete', session.id)"
+          >
+            <TrashIcon class="w-4 h-4" />
+            Delete
+          </button>
+        </div>
       </div>
     </div>
 
@@ -144,11 +193,15 @@
 
 <script setup lang="ts">
 import type { CashSession, SiteEntry } from '~/types';
-import { ChevronDownIcon } from '@heroicons/vue/24/outline';
+import { CheckIcon, ChevronDownIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import { formatCurrency as formatCurrencyUtil, formatDate, formatDuration, formatProfit as formatProfitUtil } from '~/utils/formatters';
 
 defineProps<{
   sessions: CashSession[];
+}>();
+
+const emit = defineEmits<{
+  delete: [id: string];
 }>();
 
 // Format in the session's original currency

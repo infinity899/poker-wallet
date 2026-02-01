@@ -51,15 +51,34 @@
         </div>
       </NuxtLink>
 
-      <!-- Complete button for in-progress -->
-      <div v-if="tournament.status === 'in_progress'" class="px-4 pb-3">
+      <!-- Action buttons -->
+      <div
+        v-if="!hasMultipleSites(tournament)"
+        class="flex border-t border-border-subtle dark:border-border-dark-subtle"
+      >
         <NuxtLink
+          v-if="tournament.status === 'in_progress'"
           :to="`/tournaments/${tournament.id}`"
-          class="flex items-center justify-center gap-2 w-full py-2 bg-success-50 dark:bg-success-900/20 text-success-700 dark:text-success-400 rounded-lg text-sm font-medium hover:bg-success-100 dark:hover:bg-success-900/30 transition-colors"
+          class="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/30 transition-colors"
         >
           <CheckIcon class="w-4 h-4" />
-          Complete Tournament
+          Complete
         </NuxtLink>
+        <NuxtLink
+          :to="`/tournaments/${tournament.id}`"
+          class="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted hover:bg-surface-secondary dark:hover:bg-surface-dark-tertiary transition-colors"
+          :class="{ 'border-l border-border-subtle dark:border-border-dark-subtle': tournament.status === 'in_progress' }"
+        >
+          <PencilIcon class="w-4 h-4" />
+          Edit
+        </NuxtLink>
+        <button
+          class="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-danger-500 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/30 transition-colors border-l border-border-subtle dark:border-border-dark-subtle"
+          @click="emit('delete', tournament.id)"
+        >
+          <TrashIcon class="w-4 h-4" />
+          Delete
+        </button>
       </div>
 
       <!-- Expand button for multiple sites -->
@@ -126,6 +145,33 @@
             </div>
           </template>
         </div>
+
+        <!-- Action buttons for multi-site tournaments -->
+        <div class="flex border-t border-border-subtle dark:border-border-dark-subtle">
+          <NuxtLink
+            v-if="tournament.status === 'in_progress'"
+            :to="`/tournaments/${tournament.id}`"
+            class="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-success-600 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/30 transition-colors"
+          >
+            <CheckIcon class="w-4 h-4" />
+            Complete
+          </NuxtLink>
+          <NuxtLink
+            :to="`/tournaments/${tournament.id}`"
+            class="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-foreground-muted dark:text-foreground-dark-muted hover:bg-surface-secondary dark:hover:bg-surface-dark-tertiary transition-colors"
+            :class="{ 'border-l border-border-subtle dark:border-border-dark-subtle': tournament.status === 'in_progress' }"
+          >
+            <PencilIcon class="w-4 h-4" />
+            Edit
+          </NuxtLink>
+          <button
+            class="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-danger-500 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/30 transition-colors border-l border-border-subtle dark:border-border-dark-subtle"
+            @click="emit('delete', tournament.id)"
+          >
+            <TrashIcon class="w-4 h-4" />
+            Delete
+          </button>
+        </div>
       </div>
     </div>
 
@@ -141,11 +187,15 @@
 <script setup lang="ts">
 import type { Tournament } from '~/types';
 import type { TournamentSiteEntry } from '~/types/tournament';
-import { CheckIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
+import { CheckIcon, ChevronDownIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import { formatCurrency as formatCurrencyUtil, formatDate, formatPosition, formatProfit as formatProfitUtil } from '~/utils/formatters';
 
 defineProps<{
   tournaments: Tournament[];
+}>();
+
+const emit = defineEmits<{
+  delete: [id: string];
 }>();
 
 // Format in the tournament's original currency
