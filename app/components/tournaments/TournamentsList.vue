@@ -6,6 +6,8 @@
     />
     <TournamentsStats :stats="tournamentsStore.stats" />
 
+    <TournamentsProfitChart :tournaments="tournamentsStore.sortedTournaments" />
+
     <TournamentsMobileList
       v-if="isMobile"
       :tournaments="tournamentsStore.sortedTournaments"
