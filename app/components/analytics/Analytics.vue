@@ -25,6 +25,7 @@
 <script setup lang="ts">
 import type { CashSession, DateRangePreset, Tournament } from '~/types';
 import {
+  ArcElement,
   BarElement,
   CategoryScale,
   Chart as ChartJS,
@@ -32,6 +33,7 @@ import {
   Legend,
   LinearScale,
   LineElement,
+  PieController,
   PointElement,
   Title,
   Tooltip,
@@ -50,6 +52,8 @@ ChartJS.register(
   PointElement,
   LineElement,
   BarElement,
+  ArcElement,
+  PieController,
   Title,
   Tooltip,
   Legend,

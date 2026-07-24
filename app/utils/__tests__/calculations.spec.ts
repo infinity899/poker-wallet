@@ -9,6 +9,7 @@ import {
   calculateROITrend,
   calculateSessionStats,
   calculateTournamentStats,
+  calculateWinningsBySite,
   getTournamentNetProfit,
 } from '../calculations';
 
@@ -423,5 +424,55 @@ describe('calculateBuyInBreakdown', () => {
     const totalCount = result.reduce((sum, b) => sum + b.count, 0);
 
     expect(totalCount).toBe(1);
+  });
+});
+
+describe('calculateWinningsBySite', () => {
+  it('returns empty array when there are no online winnings', () => {
+    const tournaments = [
+      createTournament({ type: 'live', venue: 'Casino', winnings: 500 }),
+      createTournament({ type: 'online', site: 'PokerStars', winnings: 0 }),
+    ];
+    expect(calculateWinningsBySite(tournaments)).toHaveLength(0);
+  });
+
+  it('aggregates winnings per online site, sorted descending', () => {
+    const tournaments = [
+      createTournament({ type: 'online', site: 'PokerStars', winnings: 100 }),
+      createTournament({ type: 'online', site: 'GGPoker', winnings: 400 }),
+      createTournament({ type: 'online', site: 'PokerStars', winnings: 250 }),
+    ];
+
+    const result = calculateWinningsBySite(tournaments);
+
+    expect(result).toEqual([
+      { site: 'GGPoker', winnings: 400 },
+      { site: 'PokerStars', winnings: 350 },
+    ]);
+  });
+
+  it('excludes live tournaments and non-positive winnings', () => {
+    const tournaments = [
+      createTournament({ type: 'live', site: 'PokerStars', winnings: 999 }),
+      createTournament({ type: 'online', site: 'GGPoker', winnings: 0 }),
+      createTournament({ type: 'online', site: 'GGPoker', winnings: 300 }),
+    ];
+
+    const result = calculateWinningsBySite(tournaments);
+
+    expect(result).toEqual([{ site: 'GGPoker', winnings: 300 }]);
+  });
+
+  it('folds sites beyond the slice limit into "Other"', () => {
+    const tournaments = Array.from({ length: 5 }, (_, i) =>
+      createTournament({ type: 'online', site: `Site${i}`, winnings: (5 - i) * 100 }));
+
+    const result = calculateWinningsBySite(tournaments, 3);
+
+    expect(result).toHaveLength(4);
+    expect(result.slice(0, 3).map(s => s.site)).toEqual(['Site0', 'Site1', 'Site2']);
+    const other = result[result.length - 1];
+    expect(other?.site).toBe('Other');
+    expect(other?.winnings).toBe(200 + 100); // Site3 (200) + Site4 (100)
   });
 });

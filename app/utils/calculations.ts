@@ -363,3 +363,35 @@ export function calculateBuyInBreakdown(
     })
     .filter(bucket => bucket.count > 0);
 }
+
+/**
+ * Total winnings grouped by online poker site.
+ * Considers only online tournaments that have a site and positive winnings.
+ * Returns sites sorted by winnings desc; sites beyond `maxSlices` are folded into "Other".
+ */
+export function calculateWinningsBySite(
+  tournaments: Tournament[],
+  maxSlices: number = 7,
+): { site: string; winnings: number }[] {
+  const totals = new Map<string, number>();
+
+  for (const t of tournaments) {
+    if (t.type !== 'online' || !t.site || t.winnings <= 0) {
+      continue;
+    }
+    totals.set(t.site, (totals.get(t.site) ?? 0) + t.winnings);
+  }
+
+  const sorted = Array.from(totals.entries())
+    .map(([site, winnings]) => ({ site, winnings }))
+    .sort((a, b) => b.winnings - a.winnings || a.site.localeCompare(b.site));
+
+  if (sorted.length <= maxSlices) {
+    return sorted;
+  }
+
+  const top = sorted.slice(0, maxSlices);
+  const otherTotal = sorted.slice(maxSlices).reduce((sum, s) => sum + s.winnings, 0);
+  top.push({ site: 'Other', winnings: otherTotal });
+  return top;
+}

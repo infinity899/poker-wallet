@@ -131,5 +131,40 @@ export function useCurrencyChartOptions() {
     },
   }));
 
-  return { lineChartOptions, barChartOptions, percentLineChartOptions };
+  const pieChartOptions = computed<ChartOptions<'pie'>>(() => {
+    void displayCurrency.value; // refresh tooltip amounts when display currency changes
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: {
+            color: TICK_COLOR,
+            font: { size: 11 },
+            padding: 12,
+            usePointStyle: true,
+            pointStyle: 'circle',
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        },
+        tooltip: {
+          ...tooltipStyle,
+          callbacks: {
+            label: (context) => {
+              const value = context.parsed as number;
+              const data = context.dataset.data as number[];
+              const total = data.reduce((sum, v) => sum + (v ?? 0), 0);
+              const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+              return `${context.label}: ${formatAmount(value)} (${pct}%)`;
+            },
+          },
+        },
+      },
+    };
+  });
+
+  return { lineChartOptions, barChartOptions, percentLineChartOptions, pieChartOptions };
 }

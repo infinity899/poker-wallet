@@ -117,9 +117,8 @@
     <AnalyticsRoiTrendChart :tournaments="tournaments" />
     <AnalyticsItmTrendChart :tournaments="tournaments" />
 
-    <div class="lg:col-span-2">
-      <AnalyticsTypeComparison :tournaments="tournaments" />
-    </div>
+    <AnalyticsTypeComparison :tournaments="tournaments" />
+    <AnalyticsWinningsBySite :tournaments="tournaments" />
   </div>
 </template>
 
