@@ -4,7 +4,7 @@
     <div class="px-5 py-5 border-b border-border dark:border-border-dark">
       <div class="flex items-center gap-3">
         <div class="w-9 h-9 bg-accent-600 dark:bg-accent-500 rounded-lg flex items-center justify-center text-white shrink-0">
-          <AppLogo :size="21" />
+          <LayoutAppLogo :size="21" />
         </div>
         <div>
           <h1 class="text-base font-semibold text-foreground dark:text-foreground-dark tracking-tight">

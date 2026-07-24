@@ -1,8 +1,8 @@
 <template>
   <header class="bg-surface dark:bg-surface-dark-secondary border-b border-border dark:border-border-dark h-14 px-4 flex items-center justify-between pt-safe">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 bg-accent-600 dark:bg-accent-500 rounded-lg flex items-center justify-center">
-        <span class="text-white font-semibold text-sm">P</span>
+      <div class="w-8 h-8 bg-accent-600 dark:bg-accent-500 rounded-lg flex items-center justify-center text-white shrink-0">
+        <LayoutAppLogo :size="19" label="Poker Wallet" />
       </div>
       <h1 class="text-base font-semibold text-foreground dark:text-foreground-dark tracking-tight">
         {{ pageTitle }}
