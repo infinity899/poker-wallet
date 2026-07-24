@@ -1,29 +1,28 @@
 import type { ChartOptions } from 'chart.js';
 
-const TICK_COLOR = 'rgb(148, 163, 184)';
-const GRID_COLOR = 'rgba(71, 85, 105, 0.15)';
-
-const tooltipStyle = {
-  backgroundColor: 'rgba(15, 23, 42, 0.95)',
-  titleColor: '#f8fafc',
-  bodyColor: '#cbd5e1',
-  borderColor: 'rgba(71, 85, 105, 0.3)',
-  borderWidth: 1,
-  padding: 12,
-  cornerRadius: 6,
-  titleFont: { size: 12, weight: 600 },
-  bodyFont: { size: 11 },
-};
-
 /**
  * Display-currency-aware Chart.js option factories for analytics/dashboard charts.
  *
  * Options are returned as `computed` so axis ticks and tooltips re-render whenever
  * the user changes their display currency. Chart data stays in stored USD — only the
  * tick/tooltip labels are converted via `formatAmount`.
+ *
+ * Colors come from the Luminance token layer via `useThemeTokens()`, so the same
+ * computed also re-runs on a light/dark flip. (These used to be hardcoded slate
+ * literals, which meant chart chrome stayed dark-mode-colored in light mode.)
  */
 export function useCurrencyChartOptions() {
   const { formatAmount, displayCurrency } = useCurrency();
+  const { tokens } = useThemeTokens();
+
+  const tooltipStyle = computed(() => ({
+    ...tokens.value.tooltip,
+    borderWidth: 1,
+    padding: 12,
+    cornerRadius: 8,
+    titleFont: { size: 12, weight: 600 as const },
+    bodyFont: { size: 11 },
+  }));
 
   const lineChartOptions = computed<ChartOptions<'line'>>(() => {
     void displayCurrency.value; // establish reactive dep so ticks refresh on currency change
@@ -34,7 +33,7 @@ export function useCurrencyChartOptions() {
       plugins: {
         legend: { display: false },
         tooltip: {
-          ...tooltipStyle,
+          ...tooltipStyle.value,
           callbacks: {
             label: (context) => {
               const value = context.raw as number;
@@ -48,12 +47,12 @@ export function useCurrencyChartOptions() {
       },
       scales: {
         y: {
-          ticks: { callback: value => formatAmount(value as number), color: TICK_COLOR, font: { size: 10 } },
-          grid: { color: GRID_COLOR },
+          ticks: { callback: value => formatAmount(value as number), color: tokens.value.tick, font: { size: 10 } },
+          grid: { color: tokens.value.grid },
           border: { display: false },
         },
         x: {
-          ticks: { color: TICK_COLOR, font: { size: 10 }, maxRotation: 45, minRotation: 45 },
+          ticks: { color: tokens.value.tick, font: { size: 10 }, maxRotation: 45, minRotation: 45 },
           grid: { display: false },
           border: { display: false },
         },
@@ -73,7 +72,7 @@ export function useCurrencyChartOptions() {
       plugins: {
         legend: { display: false },
         tooltip: {
-          ...tooltipStyle,
+          ...tooltipStyle.value,
           callbacks: {
             label: context => formatAmount(context.raw as number),
           },
@@ -81,12 +80,12 @@ export function useCurrencyChartOptions() {
       },
       scales: {
         y: {
-          ticks: { callback: value => formatAmount(value as number), color: TICK_COLOR, font: { size: 10 } },
-          grid: { color: GRID_COLOR },
+          ticks: { callback: value => formatAmount(value as number), color: tokens.value.tick, font: { size: 10 } },
+          grid: { color: tokens.value.grid },
           border: { display: false },
         },
         x: {
-          ticks: { color: TICK_COLOR, font: { size: 10 }, maxRotation: 45, minRotation: 45 },
+          ticks: { color: tokens.value.tick, font: { size: 10 }, maxRotation: 45, minRotation: 45 },
           grid: { display: false },
           border: { display: false },
         },
@@ -101,7 +100,7 @@ export function useCurrencyChartOptions() {
     plugins: {
       legend: { display: false },
       tooltip: {
-        ...tooltipStyle,
+        ...tooltipStyle.value,
         callbacks: {
           label: (context) => {
             const value = context.raw as number;
@@ -115,12 +114,12 @@ export function useCurrencyChartOptions() {
     },
     scales: {
       y: {
-        ticks: { callback: value => `${Number(value).toFixed(0)}%`, color: TICK_COLOR, font: { size: 10 } },
-        grid: { color: GRID_COLOR },
+        ticks: { callback: value => `${Number(value).toFixed(0)}%`, color: tokens.value.tick, font: { size: 10 } },
+        grid: { color: tokens.value.grid },
         border: { display: false },
       },
       x: {
-        ticks: { color: TICK_COLOR, font: { size: 10 }, maxRotation: 45, minRotation: 45 },
+        ticks: { color: tokens.value.tick, font: { size: 10 }, maxRotation: 45, minRotation: 45 },
         grid: { display: false },
         border: { display: false },
       },
@@ -144,7 +143,7 @@ export function useCurrencyChartOptions() {
       plugins: {
         legend: { display: false },
         tooltip: {
-          ...tooltipStyle,
+          ...tooltipStyle.value,
           displayColors: false,
           callbacks: {
             label: (context) => {
@@ -178,7 +177,7 @@ export function useCurrencyChartOptions() {
           display: true,
           position: 'bottom',
           labels: {
-            color: TICK_COLOR,
+            color: tokens.value.tick,
             font: { size: 11 },
             padding: 12,
             usePointStyle: true,
@@ -188,7 +187,7 @@ export function useCurrencyChartOptions() {
           },
         },
         tooltip: {
-          ...tooltipStyle,
+          ...tooltipStyle.value,
           callbacks: {
             label: (context) => {
               const value = context.parsed as number;

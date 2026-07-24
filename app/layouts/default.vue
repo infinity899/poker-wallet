@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Currency, SessionType } from '~/types';
+import type { Currency, SessionStatus, SessionType, TournamentSiteEntry } from '~/types';
 
 const { isMobile, isDesktop } = useBreakpoint();
 const { addAnnouncement, removeAnnouncement } = useAnnouncements();
@@ -56,6 +56,7 @@ const authStore = useAuthStore();
 const tournamentsStore = useTournamentsStore();
 const sessionsStore = useSessionsStore();
 const communitiesStore = useCommunitiesStore();
+const tripsStore = useTripsStore();
 const router = useRouter();
 
 const showTournamentSessionModal = ref(false);
@@ -77,17 +78,22 @@ async function handleSaveTournamentSession(data: {
   winnings: number;
   venue?: string;
   site?: string;
+  sites?: TournamentSiteEntry[];
   notes?: string;
   tags: string[];
   isSession: boolean;
   sessionCount: number;
+  status: SessionStatus;
   communityIds: string[];
 }) {
-  const result = await tournamentsStore.addTournament(data);
+  // communityIds is a UI-only field - it is stored via the junction table, not on
+  // the tournament row, so keep it out of the persisted record.
+  const { communityIds, ...tournamentData } = data;
+  const result = await tournamentsStore.addTournament(tournamentData);
 
   // Link tournament to selected communities
-  if (result.success && data.communityIds.length > 0) {
-    await communitiesStore.updateTournamentCommunities(result.data.id, data.communityIds);
+  if (result.success && communityIds.length > 0) {
+    await communitiesStore.updateTournamentCommunities(result.data.id, communityIds);
   }
 
   showTournamentSessionModal.value = false;
@@ -99,6 +105,7 @@ async function switchToRealData() {
     sessionsStore.reload(),
     tournamentsStore.reload(),
     communitiesStore.reload(),
+    tripsStore.reload(),
   ]);
 }
 

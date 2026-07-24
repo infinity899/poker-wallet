@@ -15,7 +15,7 @@
         </h1>
         <p v-if="community" class="text-sm text-foreground-secondary dark:text-foreground-dark-secondary">
           {{ community.visibility === 'public' ? 'Public' : 'Private' }}
-          <span v-if="pendingCount > 0" class="ml-2 text-accent-600 dark:text-accent-400">
+          <span v-if="(pendingCount ?? 0) > 0" class="ml-2 text-accent-600 dark:text-accent-400">
             {{ pendingCount }} pending
           </span>
         </p>

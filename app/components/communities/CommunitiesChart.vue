@@ -5,7 +5,7 @@
     </h3>
     <div class="h-64">
       <Line
-        v-if="chartData.labels.length > 0"
+        v-if="(chartData.labels?.length ?? 0) > 0"
         :data="chartData"
         :options="chartOptions"
       />
@@ -55,19 +55,20 @@ const chartData = computed<ChartData<'line'>>(() => {
   // Get per-member cumulative data (all members aligned on same dates)
   const perMemberData = communitiesStore.getPerMemberCumulativeProfitData(props.communityId);
 
-  if (perMemberData.length === 0 || perMemberData[0].data.length === 0) {
+  // All members share the same date axis, so the first member defines the labels.
+  const axis = perMemberData[0];
+  if (!axis || axis.data.length === 0) {
     return { labels: [], datasets: [] };
   }
 
-  // Use dates from the first member (all members have same dates)
-  const labels = perMemberData[0].data.map(d =>
+  const labels = axis.data.map(d =>
     new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
   );
 
   const datasets: ChartData<'line'>['datasets'] = [];
 
   // Calculate combined line by summing all members at each date point
-  const combinedData = perMemberData[0].data.map((_, dateIndex) => {
+  const combinedData = axis.data.map((_, dateIndex) => {
     return perMemberData.reduce((sum, member) => {
       return sum + (member.data[dateIndex]?.profit || 0);
     }, 0);
@@ -146,7 +147,7 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
         displayColors: true,
         callbacks: {
           label: (context) => {
-            const value = context.parsed.y;
+            const value = context.parsed.y ?? 0;
             return `${context.dataset.label}: ${formatCurrency(value)}`;
           },
         },

@@ -433,9 +433,13 @@ export const useCommunitiesStore = defineStore('communities', () => {
         const sessionIds = getSessionIdsForCommunity(communityId);
         const tournamentIds = getTournamentIdsForCommunity(communityId);
 
-        // Filter from user's data (demo mode assumes single user)
-        const sessions = sessionsStore.sessions.filter(s => sessionIds.includes(s.id));
-        const tournaments = tournamentsStore.tournaments.filter(t => tournamentIds.includes(t.id));
+        // Filter from user's data (demo mode assumes single user).
+        // Store state is exposed as readonly refs; we only read here, so assert
+        // back to the mutable element types the cache is typed with.
+        const sessions = (sessionsStore.sessions as CashSession[])
+          .filter(s => sessionIds.includes(s.id));
+        const tournaments = (tournamentsStore.tournaments as Tournament[])
+          .filter(t => tournamentIds.includes(t.id));
 
         communitySessionsCache.value.set(communityId, sessions);
         communityTournamentsCache.value.set(communityId, tournaments);
@@ -495,7 +499,10 @@ export const useCommunitiesStore = defineStore('communities', () => {
         await saveLocalStorageState();
       }
       else {
-        createdCommunity = await adapter.createCommunity(data);
+        createdCommunity = await adapter.createCommunity({
+          ...data,
+          createdBy: currentUserId.value,
+        });
         communities.value.push(createdCommunity);
 
         // Add creator as admin member (uses upsert to handle duplicates)
@@ -524,8 +531,13 @@ export const useCommunitiesStore = defineStore('communities', () => {
       const adapter = getAdapter();
 
       if (adapter instanceof LocalStorageCommunityAdapter) {
-        const updated = {
-          ...communities.value[index],
+        const existing = communities.value[index];
+        if (!existing) {
+          return { success: false, error: new Error('Community not found') };
+        }
+
+        const updated: Community = {
+          ...existing,
           ...updates,
           updatedAt: new Date().toISOString(),
         };
@@ -642,8 +654,13 @@ export const useCommunitiesStore = defineStore('communities', () => {
       const adapter = getAdapter();
 
       if (adapter instanceof LocalStorageCommunityAdapter) {
-        const updated = {
-          ...members.value[index],
+        const existing = members.value[index];
+        if (!existing) {
+          return { success: false, error: new Error('Member not found') };
+        }
+
+        const updated: CommunityMember = {
+          ...existing,
           status: 'approved' as const,
           joinedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),

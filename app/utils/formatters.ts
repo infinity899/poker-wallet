@@ -128,6 +128,37 @@ export function formatDateShort(dateString: string): string {
   }).format(date);
 }
 
+/**
+ * Format a date range compactly: "Aug 12 – 24, 2026" when both dates share a month,
+ * "Aug 28 – Sep 3, 2026" within one year, otherwise two full dates.
+ *
+ * Note: this uses the same local-time Intl formatting as formatDate, so it agrees
+ * with the rest of the app (see the known UTC-parsing caveat there).
+ */
+export function formatDateRange(startDate: string, endDate: string): string {
+  if (startDate === endDate) {
+    return formatDate(startDate);
+  }
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const sameMonth = sameYear && start.getMonth() === end.getMonth();
+
+  if (sameMonth) {
+    const month = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(start);
+    return `${month} ${start.getDate()} – ${end.getDate()}, ${end.getFullYear()}`;
+  }
+
+  if (sameYear) {
+    const from = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(start);
+    const to = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(end);
+    return `${from} – ${to}, ${end.getFullYear()}`;
+  }
+
+  return `${formatDate(startDate)} – ${formatDate(endDate)}`;
+}
+
 export function formatRelativeDate(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();

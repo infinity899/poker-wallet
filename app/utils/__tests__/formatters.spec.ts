@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatCurrency,
   formatDate,
+  formatDateRange,
   formatDuration,
   formatDurationShort,
   formatNumber,
@@ -153,5 +154,25 @@ describe('formatPosition', () => {
     expect(formatPosition(4)).toBe('4th');
     expect(formatPosition(10)).toBe('10th');
     expect(formatPosition(21)).toBe('21th');
+  });
+});
+
+describe('formatDateRange', () => {
+  it('collapses a range inside one month', () => {
+    expect(formatDateRange('2026-08-12', '2026-08-24')).toBe('Aug 12 – 24, 2026');
+  });
+
+  it('shows both months within the same year', () => {
+    expect(formatDateRange('2026-08-28', '2026-09-03')).toBe('Aug 28 – Sep 3, 2026');
+  });
+
+  it('shows two full dates across years', () => {
+    expect(formatDateRange('2025-12-29', '2026-01-04')).toContain('–');
+    expect(formatDateRange('2025-12-29', '2026-01-04')).toContain('2025');
+    expect(formatDateRange('2025-12-29', '2026-01-04')).toContain('2026');
+  });
+
+  it('renders a single date when start and end match', () => {
+    expect(formatDateRange('2026-08-12', '2026-08-12')).toBe(formatDate('2026-08-12'));
   });
 });

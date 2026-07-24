@@ -47,14 +47,12 @@ export const useThemeStore = defineStore('theme', () => {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const shouldBeDark = mode.value === 'dark' || (mode.value === 'system' && prefersDark);
 
-    isDark.value = shouldBeDark;
+    // Swap the class BEFORE publishing `isDark`, so anything that re-reads the
+    // CSS token layer off that ref (useThemeTokens -> Chart.js colors) sees the
+    // new custom-property values rather than the outgoing theme's.
+    document.documentElement.classList.toggle('dark', shouldBeDark);
 
-    if (shouldBeDark) {
-      document.documentElement.classList.add('dark');
-    }
-    else {
-      document.documentElement.classList.remove('dark');
-    }
+    isDark.value = shouldBeDark;
   }
 
   function toggle() {

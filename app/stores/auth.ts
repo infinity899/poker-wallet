@@ -182,6 +182,8 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('poker-wallet-community-members');
     localStorage.removeItem('poker-wallet-session-communities');
     localStorage.removeItem('poker-wallet-tournament-communities');
+    localStorage.removeItem('poker-wallet-trips');
+    localStorage.removeItem('poker-wallet-expenses');
     localStorage.removeItem('poker-wallet-reference');
   }
 

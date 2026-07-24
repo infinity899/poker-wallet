@@ -1,4 +1,17 @@
-import type { BuyInLevelStats, CashSession, SessionStats, Tournament, TournamentStats } from '~/types';
+import type {
+  BuyInLevelStats,
+  CashSession,
+  Expense,
+  ExpenseCategory,
+  ExpenseCategoryTotal,
+  ExpenseStats,
+  SessionStats,
+  Tournament,
+  TournamentStats,
+  TripPnL,
+  TripStats,
+} from '~/types';
+import { EXPENSE_CATEGORY_LABELS } from '~/types';
 
 /**
  * Calculate duration in minutes from start and end times
@@ -394,4 +407,162 @@ export function calculateWinningsBySite(
   const otherTotal = sorted.slice(maxSlices).reduce((sum, s) => sum + s.winnings, 0);
   top.push({ site: 'Other', winnings: otherTotal });
   return top;
+}
+
+/**
+ * Total spend grouped by expense category (USD).
+ * Mirrors calculateWinningsBySite: positive amounts only, sorted desc with an
+ * alphabetical tiebreak, and categories past `maxSlices` folded into "Other".
+ * Unlike sites, 'other' is itself a real category, so the overflow bucket MERGES
+ * into an existing 'other' slice rather than duplicating it. With the fixed 7
+ * categories and the default maxSlices of 7 the fold never triggers.
+ */
+export function calculateExpensesByCategory(
+  expenses: Expense[],
+  maxSlices: number = 7,
+): ExpenseCategoryTotal[] {
+  const totals = new Map<ExpenseCategory, number>();
+
+  for (const e of expenses) {
+    if (e.amount <= 0) {
+      continue;
+    }
+    totals.set(e.category, (totals.get(e.category) ?? 0) + e.amount);
+  }
+
+  const sorted = Array.from(totals.entries())
+    .map(([category, amount]) => ({
+      category,
+      label: EXPENSE_CATEGORY_LABELS[category],
+      amount,
+    }))
+    .sort((a, b) => b.amount - a.amount || a.category.localeCompare(b.category));
+
+  if (sorted.length <= maxSlices) {
+    return sorted;
+  }
+
+  const top = sorted.slice(0, maxSlices);
+  const otherTotal = sorted.slice(maxSlices).reduce((sum, c) => sum + c.amount, 0);
+  const existingOther = top.find(c => c.category === 'other');
+
+  if (existingOther) {
+    existingOther.amount += otherTotal;
+  }
+  else {
+    top.push({
+      category: 'other',
+      label: EXPENSE_CATEGORY_LABELS.other,
+      amount: otherTotal,
+    });
+  }
+
+  return top;
+}
+
+/**
+ * Headline expense numbers (USD) plus the per-category breakdown.
+ */
+export function calculateExpenseStats(expenses: Expense[]): ExpenseStats {
+  if (expenses.length === 0) {
+    return {
+      totalExpenses: 0,
+      expenseCount: 0,
+      avgExpense: 0,
+      biggestExpense: 0,
+      byCategory: [],
+    };
+  }
+
+  const amounts = expenses.map(e => e.amount);
+  const totalExpenses = amounts.reduce((a, b) => a + b, 0);
+
+  return {
+    totalExpenses,
+    expenseCount: expenses.length,
+    avgExpense: totalExpenses / expenses.length,
+    biggestExpense: Math.max(...amounts),
+    byCategory: calculateExpensesByCategory(expenses),
+  };
+}
+
+/**
+ * Gross (poker-only) and net (after expenses) P&L for one trip. All amounts USD.
+ *
+ * Tournaments with status 'in_progress' are EXCLUDED - they have no result yet and
+ * would drag the trip profit down; `tournamentCount` therefore counts completed
+ * tournaments only. Pass already-resolved tournaments (stale ids filtered) - this
+ * function does no lookups.
+ *
+ * `grossProfit` uses getTournamentNetProfit(), so for multi-site session rows it is
+ * a bankroll delta and will NOT equal `cashes - buyIns`. That is intentional and
+ * matches every other profit figure in the app.
+ *
+ * Both ROI figures return 0 when nothing was invested (trip with zero tournaments
+ * and zero expenses) - no divide-by-zero, no NaN, no Infinity.
+ */
+export function calculateTripPnL(tournaments: Tournament[], expenses: Expense[]): TripPnL {
+  const completed = tournaments.filter(t => t.status !== 'in_progress');
+
+  const buyIns = completed.reduce((sum, t) => sum + getTournamentCost(t), 0);
+  const cashes = completed.reduce((sum, t) => sum + t.winnings, 0);
+  const grossProfit = completed.reduce((sum, t) => sum + getTournamentNetProfit(t), 0);
+  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const netProfit = grossProfit - totalExpenses;
+  const netInvestment = buyIns + totalExpenses;
+
+  return {
+    buyIns,
+    cashes,
+    grossProfit,
+    totalExpenses,
+    expensesByCategory: calculateExpensesByCategory(expenses),
+    netProfit,
+    roi: buyIns > 0 ? (grossProfit / buyIns) * 100 : 0,
+    netRoi: netInvestment > 0 ? (netProfit / netInvestment) * 100 : 0,
+    tournamentCount: completed.length,
+    expenseCount: expenses.length,
+  };
+}
+
+/**
+ * Roll several trip P&Ls into one aggregate. ROI figures are recomputed from the
+ * summed totals (never averaged), so they stay correct.
+ */
+export function calculateTripsStats(pnls: TripPnL[]): TripStats {
+  const buyIns = pnls.reduce((sum, p) => sum + p.buyIns, 0);
+  const cashes = pnls.reduce((sum, p) => sum + p.cashes, 0);
+  const grossProfit = pnls.reduce((sum, p) => sum + p.grossProfit, 0);
+  const totalExpenses = pnls.reduce((sum, p) => sum + p.totalExpenses, 0);
+  const netProfit = grossProfit - totalExpenses;
+  const netInvestment = buyIns + totalExpenses;
+
+  // Merge the per-trip category breakdowns into one aggregate list.
+  const merged = new Map<ExpenseCategory, number>();
+  for (const pnl of pnls) {
+    for (const entry of pnl.expensesByCategory) {
+      merged.set(entry.category, (merged.get(entry.category) ?? 0) + entry.amount);
+    }
+  }
+  const expensesByCategory = Array.from(merged.entries())
+    .map(([category, amount]) => ({
+      category,
+      label: EXPENSE_CATEGORY_LABELS[category],
+      amount,
+    }))
+    .sort((a, b) => b.amount - a.amount || a.category.localeCompare(b.category));
+
+  return {
+    totalTrips: pnls.length,
+    buyIns,
+    cashes,
+    grossProfit,
+    totalExpenses,
+    expensesByCategory,
+    netProfit,
+    roi: buyIns > 0 ? (grossProfit / buyIns) * 100 : 0,
+    netRoi: netInvestment > 0 ? (netProfit / netInvestment) * 100 : 0,
+    tournamentCount: pnls.reduce((sum, p) => sum + p.tournamentCount, 0),
+    expenseCount: pnls.reduce((sum, p) => sum + p.expenseCount, 0),
+  };
 }

@@ -1,3 +1,4 @@
+import type { ExpenseCategory } from './expense';
 import type { Currency, GameType, SessionType } from './session';
 
 export interface DateRange {
@@ -53,6 +54,21 @@ export const DEFAULT_TOURNAMENT_FILTERS: TournamentFilters = {
   venues: [],
   tags: [],
   itmOnly: false,
+};
+
+export interface ExpenseFilters {
+  dateRange: DateRange;
+  datePreset: DateRangePreset;
+  categories: ExpenseCategory[]; // empty = all categories
+  tripId: string | 'all' | 'none'; // 'all' = every expense, 'none' = standalone only
+  searchQuery?: string;
+}
+
+export const DEFAULT_EXPENSE_FILTERS: ExpenseFilters = {
+  dateRange: { start: null, end: null },
+  datePreset: 'lifetime',
+  categories: [],
+  tripId: 'all',
 };
 
 // Dashboard filter for combined view

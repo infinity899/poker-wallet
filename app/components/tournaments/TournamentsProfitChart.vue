@@ -38,6 +38,8 @@ const props = defineProps<{
   tournaments: Tournament[];
 }>();
 
+const { tokens } = useThemeTokens();
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -65,15 +67,16 @@ const chartData = computed<ChartData<'line'>>(() => {
     datasets: [{
       label: 'Cumulative Profit',
       data: data.map(d => d.cumulative),
-      borderColor: 'rgb(139, 92, 246)',
-      backgroundColor: 'rgba(139, 92, 246, 0.1)',
+      borderColor: tokens.value.accent,
+      backgroundColor: withAlpha(tokens.value.accent, 0.1),
       fill: true,
       tension: 0.3,
     }],
   };
 });
 
-const chartOptions: ChartOptions<'line'> = {
+// Computed so chart chrome re-resolves on a light/dark flip.
+const chartOptions = computed<ChartOptions<'line'>>(() => ({
   responsive: true,
   maintainAspectRatio: false,
   interaction: {
@@ -85,16 +88,13 @@ const chartOptions: ChartOptions<'line'> = {
       display: false,
     },
     tooltip: {
-      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-      titleColor: '#f8fafc',
-      bodyColor: '#cbd5e1',
-      borderColor: 'rgba(71, 85, 105, 0.3)',
+      ...tokens.value.tooltip,
       borderWidth: 1,
       padding: 12,
-      cornerRadius: 6,
+      cornerRadius: 8,
       titleFont: {
         size: 12,
-        weight: 600,
+        weight: 600 as const,
       },
       bodyFont: {
         size: 11,
@@ -114,13 +114,11 @@ const chartOptions: ChartOptions<'line'> = {
     y: {
       ticks: {
         callback: value => formatCurrency(value as number),
-        color: 'rgb(148, 163, 184)',
-        font: {
-          size: 10,
-        },
+        color: tokens.value.tick,
+        font: { size: 10 },
       },
       grid: {
-        color: 'rgba(71, 85, 105, 0.15)',
+        color: tokens.value.grid,
       },
       border: {
         display: false,
@@ -128,10 +126,8 @@ const chartOptions: ChartOptions<'line'> = {
     },
     x: {
       ticks: {
-        color: 'rgb(148, 163, 184)',
-        font: {
-          size: 10,
-        },
+        color: tokens.value.tick,
+        font: { size: 10 },
         maxRotation: 45,
         minRotation: 45,
       },
@@ -153,5 +149,5 @@ const chartOptions: ChartOptions<'line'> = {
       borderWidth: 2,
     },
   },
-};
+}));
 </script>

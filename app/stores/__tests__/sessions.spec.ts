@@ -94,6 +94,7 @@ describe('useSessionsStore', () => {
           result: 100,
           duration: 120,
           tags: [],
+          status: 'completed',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
@@ -134,6 +135,7 @@ describe('useSessionsStore', () => {
         result: 200,
         duration: 180,
         tags: ['good session'],
+        status: 'completed',
       });
 
       expect(store.sessions).toHaveLength(1);
@@ -160,6 +162,7 @@ describe('useSessionsStore', () => {
         result: 100,
         duration: 120,
         tags: [],
+        status: 'completed',
       });
 
       const result = await store.updateSession('test-uuid-123', { result: 300 });
@@ -192,6 +195,7 @@ describe('useSessionsStore', () => {
         result: 100,
         duration: 120,
         tags: [],
+        status: 'completed',
       });
 
       const result = await store.deleteSession('test-uuid-123');
@@ -221,6 +225,7 @@ describe('useSessionsStore', () => {
         result: 100,
         duration: 120,
         tags: [],
+        status: 'completed',
       });
       await store.addSession({
         date: '2024-01-16',
@@ -233,6 +238,7 @@ describe('useSessionsStore', () => {
         result: 200,
         duration: 120,
         tags: [],
+        status: 'completed',
       });
       await store.addSession({
         date: '2024-01-17',
@@ -245,6 +251,7 @@ describe('useSessionsStore', () => {
         result: 300,
         duration: 120,
         tags: [],
+        status: 'completed',
       });
 
       const result = await store.deleteSessions(['uuid-1', 'uuid-3']);
@@ -272,6 +279,7 @@ describe('useSessionsStore', () => {
         result: 150,
         duration: 120,
         tags: [],
+        status: 'completed',
       });
 
       const session = store.getSessionById('test-uuid-123');
@@ -302,6 +310,7 @@ describe('useSessionsStore', () => {
         result: 100,
         duration: 120,
         tags: [],
+        status: 'completed',
       });
       await store.addSession({
         date: '2024-01-16',
@@ -314,6 +323,7 @@ describe('useSessionsStore', () => {
         result: 200,
         duration: 120,
         tags: [],
+        status: 'completed',
       });
 
       store.setFilters({ type: 'live' });
@@ -352,6 +362,7 @@ describe('useSessionsStore', () => {
         result: 100,
         duration: 60,
         tags: [],
+        status: 'completed',
       });
       await store.addSession({
         date: '2024-01-16',
@@ -364,6 +375,7 @@ describe('useSessionsStore', () => {
         result: -50,
         duration: 60,
         tags: [],
+        status: 'completed',
       });
 
       expect(store.stats.totalSessions).toBe(2);
@@ -388,6 +400,7 @@ describe('useSessionsStore', () => {
         result: 100,
         duration: 120,
         tags: [],
+        status: 'completed',
       });
 
       const importedSessions: CashSession[] = [
@@ -403,6 +416,7 @@ describe('useSessionsStore', () => {
           result: 500,
           duration: 240,
           tags: [],
+          status: 'completed',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
@@ -429,6 +443,7 @@ describe('useSessionsStore', () => {
         result: 100,
         duration: 120,
         tags: [],
+        status: 'completed',
       });
 
       const importedSessions: CashSession[] = [
@@ -444,6 +459,7 @@ describe('useSessionsStore', () => {
           result: 500,
           duration: 240,
           tags: [],
+          status: 'completed',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
@@ -469,6 +485,7 @@ describe('useSessionsStore', () => {
         result: 100,
         duration: 120,
         tags: [],
+        status: 'completed',
       });
 
       await store.clearAll();

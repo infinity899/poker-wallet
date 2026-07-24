@@ -1,5 +1,5 @@
 <template>
-  <nav class="bg-surface dark:bg-surface-dark-secondary border-t border-border dark:border-border-dark h-16 grid grid-cols-5 pb-safe">
+  <nav class="bg-surface dark:bg-surface-dark-secondary border-t border-border dark:border-border-dark h-16 grid grid-cols-6 pb-safe">
     <NuxtLink
       v-for="item in navItems"
       :key="item.path"
@@ -23,6 +23,7 @@ import {
   BanknotesIcon,
   ChartBarIcon,
   HomeIcon,
+  MapIcon,
   TrophyIcon,
   UserGroupIcon,
 } from '@heroicons/vue/24/outline';
@@ -30,6 +31,7 @@ import {
   BanknotesIcon as BanknotesIconSolid,
   ChartBarIcon as ChartBarIconSolid,
   HomeIcon as HomeIconSolid,
+  MapIcon as MapIconSolid,
   TrophyIcon as TrophyIconSolid,
   UserGroupIcon as UserGroupIconSolid,
 } from '@heroicons/vue/24/solid';
@@ -56,8 +58,16 @@ const navItems = [
     iconActive: TrophyIconSolid,
   },
   {
+    path: '/trips',
+    label: 'Trips',
+    icon: MapIcon,
+    iconActive: MapIconSolid,
+  },
+  {
+    // Shortened from "Communities": at 6 columns a 320px viewport gives ~53px per
+    // cell and the longer label overflows.
     path: '/communities',
-    label: 'Communities',
+    label: 'Groups',
     icon: UserGroupIcon,
     iconActive: UserGroupIconSolid,
   },

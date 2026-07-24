@@ -47,6 +47,15 @@ const pageTitle = computed(() => {
   if (path.startsWith('/tournaments')) {
     return 'Tournaments';
   }
+  if (path.startsWith('/trips/new')) {
+    return 'New Trip';
+  }
+  if (path.startsWith('/trips/')) {
+    return 'Trip';
+  }
+  if (path.startsWith('/trips')) {
+    return 'Trips';
+  }
   if (path.startsWith('/analytics')) {
     return 'Analytics';
   }

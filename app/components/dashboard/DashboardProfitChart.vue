@@ -16,18 +16,19 @@
         No data available
       </div>
     </div>
+    <!-- Swatches are bound to the same tokens the datasets use, so the legend
+         can never drift out of sync with the lines it describes. -->
     <div class="flex flex-wrap justify-center gap-4 lg:gap-6 mt-4 text-xs">
-      <div class="flex items-center gap-2">
-        <span class="w-3 h-0.5 rounded-full bg-blue-500" />
-        <span class="text-foreground-muted dark:text-foreground-dark-muted">Cash Sessions</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <span class="w-3 h-0.5 rounded-full bg-violet-500" />
-        <span class="text-foreground-muted dark:text-foreground-dark-muted">Tournaments</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <span class="w-3 h-0.5 rounded-full bg-accent-500" />
-        <span class="text-foreground-muted dark:text-foreground-dark-muted">Combined</span>
+      <div
+        v-for="entry in legend"
+        :key="entry.label"
+        class="flex items-center gap-2"
+      >
+        <span
+          class="w-3 h-0.5 rounded-full"
+          :style="{ backgroundColor: entry.color }"
+        />
+        <span class="text-foreground-muted">{{ entry.label }}</span>
       </div>
     </div>
   </div>
@@ -42,7 +43,21 @@ defineProps<{
   chartData: ChartData<'line'>;
 }>();
 
-const chartOptions: ChartOptions<'line'> = {
+const { tokens } = useThemeTokens();
+
+/** Mirrors the dataset colors assigned in Dashboard.vue. */
+const legend = computed(() => {
+  const t = tokens.value;
+  return [
+    { label: 'Cash Sessions', color: t.series[6] ?? t.info },
+    { label: 'Tournaments', color: t.series[5] ?? t.accent },
+    { label: 'Combined', color: t.accent },
+  ];
+});
+
+// Computed, not a static const: chart chrome has to re-resolve when the theme
+// flips. Previously these were dark-mode slate literals that never changed.
+const chartOptions = computed<ChartOptions<'line'>>(() => ({
   responsive: true,
   maintainAspectRatio: false,
   interaction: {
@@ -54,16 +69,13 @@ const chartOptions: ChartOptions<'line'> = {
       display: false,
     },
     tooltip: {
-      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-      titleColor: '#f8fafc',
-      bodyColor: '#cbd5e1',
-      borderColor: 'rgba(71, 85, 105, 0.3)',
+      ...tokens.value.tooltip,
       borderWidth: 1,
       padding: 12,
-      cornerRadius: 6,
+      cornerRadius: 8,
       titleFont: {
         size: 12,
-        weight: '600',
+        weight: 600 as const,
       },
       bodyFont: {
         size: 11,
@@ -83,13 +95,11 @@ const chartOptions: ChartOptions<'line'> = {
     y: {
       ticks: {
         callback: value => formatCurrency(value as number),
-        color: 'rgb(148, 163, 184)',
-        font: {
-          size: 10,
-        },
+        color: tokens.value.tick,
+        font: { size: 10 },
       },
       grid: {
-        color: 'rgba(71, 85, 105, 0.15)',
+        color: tokens.value.grid,
       },
       border: {
         display: false,
@@ -97,10 +107,8 @@ const chartOptions: ChartOptions<'line'> = {
     },
     x: {
       ticks: {
-        color: 'rgb(148, 163, 184)',
-        font: {
-          size: 10,
-        },
+        color: tokens.value.tick,
+        font: { size: 10 },
         maxRotation: 45,
         minRotation: 45,
       },
@@ -122,5 +130,5 @@ const chartOptions: ChartOptions<'line'> = {
       borderWidth: 2,
     },
   },
-};
+}));
 </script>

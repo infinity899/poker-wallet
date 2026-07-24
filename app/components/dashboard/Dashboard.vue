@@ -5,6 +5,7 @@
       v-model:show-tournaments="showTournaments"
       v-model:show-live="showLive"
       v-model:show-online="showOnline"
+      v-model:include-expenses="includeExpenses"
     />
 
     <DashboardStats
@@ -12,6 +13,7 @@
       :total-entries="totalEntries"
       :win-rate="winRate"
       :hourly-rate="hourlyRate"
+      :include-expenses="includeExpenses"
     />
 
     <DashboardProfitChart :chart-data="combinedChartData" />
@@ -50,11 +52,16 @@ ChartJS.register(
 
 const sessionsStore = useSessionsStore();
 const tournamentsStore = useTournamentsStore();
+const { tokens } = useThemeTokens();
 
 const showCash = ref(true);
 const showTournaments = ref(true);
 const showLive = ref(true);
 const showOnline = ref(true);
+// Default OFF - every existing figure stays exactly as it was until the user opts in.
+const includeExpenses = ref(false);
+
+const tripsStore = useTripsStore();
 
 const filteredSessions = computed(() => {
   if (!showCash.value) {
@@ -86,7 +93,7 @@ const filteredTournaments = computed(() => {
   });
 });
 
-const totalProfit = computed(() => {
+const grossProfit = computed(() => {
   const sessionProfit = filteredSessions.value.reduce(
     (sum, s) => sum + s.result,
     0,
@@ -97,6 +104,17 @@ const totalProfit = computed(() => {
   }, 0);
   return sessionProfit + tournamentProfit;
 });
+
+// All logged trip expenses, in USD. Deliberately NOT filtered by the cash/tournament/
+// live/online toggles - an expense belongs to a trip, not to an individual entry.
+const totalTripExpenses = computed(() =>
+  includeExpenses.value
+    ? tripsStore.expenses.reduce((sum, e) => sum + e.amount, 0)
+    : 0);
+
+// Keeps its name and its consumers; it simply nets out expenses when the toggle is
+// on. With the toggle off this is identical to the previous behaviour.
+const totalProfit = computed(() => grossProfit.value - totalTripExpenses.value);
 
 const totalEntries = computed(() => {
   return filteredSessions.value.length + filteredTournaments.value.length;
@@ -194,49 +212,60 @@ const combinedChartData = computed(() => {
     combinedValues.push(combinedCumulative);
   }
 
+  /*
+   * Series colors come from the Luminance token layer, held at one lightness so
+   * no line visually outranks another. Combined takes the accent because it is
+   * the headline figure; the other two take hue rotations that stay clear of
+   * green and red, which mean profit and loss everywhere else in the app.
+   */
+  const t = tokens.value;
+  const combinedColor = t.accent;
+  const cashColor = t.series[6] ?? t.info;
+  const tournamentColor = t.series[5] ?? t.accent;
+
   const datasets = [
     {
       label: 'Combined',
       data: combinedValues,
-      borderColor: 'rgb(16, 185, 129)',
-      backgroundColor: 'rgba(16, 185, 129, 0.08)',
+      borderColor: combinedColor,
+      backgroundColor: withAlpha(combinedColor, 0.08),
       fill: true,
       tension: 0.4,
       borderWidth: 3,
       pointRadius: 0,
       pointHoverRadius: 6,
-      pointHoverBackgroundColor: 'rgb(16, 185, 129)',
-      pointHoverBorderColor: '#fff',
+      pointHoverBackgroundColor: combinedColor,
+      pointHoverBorderColor: t.surface,
       pointHoverBorderWidth: 2,
       order: 3,
     },
     {
       label: 'Cash Sessions',
       data: cashValues,
-      borderColor: 'rgb(59, 130, 246)',
-      backgroundColor: 'rgba(59, 130, 246, 0.08)',
+      borderColor: cashColor,
+      backgroundColor: withAlpha(cashColor, 0.08),
       fill: true,
       tension: 0.4,
       borderWidth: 3,
       pointRadius: 0,
       pointHoverRadius: 6,
-      pointHoverBackgroundColor: 'rgb(59, 130, 246)',
-      pointHoverBorderColor: '#fff',
+      pointHoverBackgroundColor: cashColor,
+      pointHoverBorderColor: t.surface,
       pointHoverBorderWidth: 2,
       order: 2,
     },
     {
       label: 'Tournaments',
       data: tournamentValues,
-      borderColor: 'rgb(168, 85, 247)',
-      backgroundColor: 'rgba(168, 85, 247, 0.08)',
+      borderColor: tournamentColor,
+      backgroundColor: withAlpha(tournamentColor, 0.08),
       fill: true,
       tension: 0.4,
       borderWidth: 3,
       pointRadius: 0,
       pointHoverRadius: 6,
-      pointHoverBackgroundColor: 'rgb(168, 85, 247)',
-      pointHoverBorderColor: '#fff',
+      pointHoverBackgroundColor: tournamentColor,
+      pointHoverBorderColor: t.surface,
       pointHoverBorderWidth: 2,
       order: 1,
     },

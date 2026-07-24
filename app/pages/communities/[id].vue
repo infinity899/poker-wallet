@@ -291,7 +291,8 @@ const communitiesStore = useCommunitiesStore();
 const toast = useToast();
 
 const communityId = computed(() => route.params.id as string);
-const community = computed(() => communitiesStore.getCommunityById(communityId.value));
+// Normalise undefined -> null: the child modal props are typed `Community | null`.
+const community = computed(() => communitiesStore.getCommunityById(communityId.value) ?? null);
 const loading = ref(false);
 
 // Modal states

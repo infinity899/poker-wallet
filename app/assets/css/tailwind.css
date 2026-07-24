@@ -2,83 +2,330 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================================
+   LUMINANCE — TOKEN LAYER
+   Spec: .claude/skills/design/SKILL.md Part 2
+
+   Surfaces, foreground and edges FLIP between modes (:root → :root.dark).
+   Semantic ramps and the neutral ramp are STATIC — components use them in
+   explicit light/dark pairs (`text-gray-900 dark:text-gray-100`), so flipping
+   them would double-invert.
+
+   Color tokens are stored as raw OKLCH CHANNELS, not colors, so that
+   tailwind.config.js can wrap them as `oklch(var(--x) / <alpha-value>)` and
+   keep opacity modifiers (`bg-danger-900/30`) working. Edges are the one
+   exception: they bake their own alpha and must never take a modifier.
+   ============================================================================ */
+
 @layer base {
+  :root {
+    color-scheme: light;
+
+    /* ---- Hue knobs. Change one number to rebrand. ---- */
+    /* Violet. Deliberately not green — success owns green, so a profit figure
+       never reads as a call-to-action. 264 is measurably blue in OKLCH; 285 is
+       where it reads as violet and stays clear of the blue chart series. */
+    --accent-h: 285;
+    --neutral-h: 265;
+    --success-h: 155;
+    --danger-h: 25;
+    --warning-h: 75;
+    --info-h: 235;
+
+    /* ---- Surfaces (light): white cards on a faintly tinted canvas ---- */
+    --s-canvas: 0.976 0.004 var(--neutral-h);
+    --s-surface: 1 0 0;
+    --s-raised: 0.965 0.006 var(--neutral-h);
+    --s-overlay: 1 0 0;
+    --s-inset: 0.965 0.006 var(--neutral-h);
+
+    /* ---- Foreground: four levels, always all four ---- */
+    --fg: 0.22 0.015 var(--neutral-h);
+    --fg-secondary: 0.44 0.014 var(--neutral-h);
+    --fg-muted: 0.58 0.012 var(--neutral-h);
+    --fg-faint: 0.70 0.010 var(--neutral-h);
+
+    /* ---- Edges: baked alpha, no opacity modifiers ---- */
+    --edge: oklch(0 0 0 / 0.09);
+    --edge-strong: oklch(0 0 0 / 0.14);
+    --edge-subtle: oklch(0 0 0 / 0.05);
+    --edge-highlight: transparent; /* light-from-above is meaningless on light */
+
+    /* ---- Elevation: surface separation + soft shadow ---- */
+    --lift-1: 0 1px 2px oklch(0 0 0 / 0.05);
+    --lift-2:
+      0 1px 3px oklch(0 0 0 / 0.07),
+      0 4px 12px -4px oklch(0 0 0 / 0.06);
+    --lift-3:
+      0 8px 24px -8px oklch(0 0 0 / 0.12),
+      0 2px 6px oklch(0 0 0 / 0.06);
+
+    --scrim: oklch(0.25 0.012 var(--neutral-h) / 0.45);
+
+    /* ---- Neutral ramp (static). Tuned so 900/800/700 land on the
+           surface / raised / overlay elevation steps of dark mode, which makes
+           the raw `bg-gray-800`-style usages correct rather than merely
+           tolerated. 300–600 serve text tiers, hence the non-linear step. ---- */
+    --n-50: 0.976 0.004 var(--neutral-h);
+    --n-100: 0.955 0.005 var(--neutral-h);
+    --n-200: 0.920 0.007 var(--neutral-h);
+    --n-300: 0.840 0.010 var(--neutral-h);
+    --n-400: 0.700 0.012 var(--neutral-h);
+    --n-500: 0.580 0.012 var(--neutral-h);
+    --n-600: 0.440 0.014 var(--neutral-h);
+    --n-700: 0.300 0.018 var(--neutral-h);
+    --n-800: 0.250 0.016 var(--neutral-h);
+    --n-900: 0.210 0.014 var(--neutral-h);
+    --n-950: 0.170 0.012 var(--neutral-h);
+
+    /* ---- Accent ramp (static): violet. Chroma peaks mid-ramp. ---- */
+    --a-50: 0.970 0.015 var(--accent-h);
+    --a-100: 0.940 0.032 var(--accent-h);
+    --a-200: 0.890 0.060 var(--accent-h);
+    --a-300: 0.820 0.100 var(--accent-h);
+    --a-400: 0.740 0.150 var(--accent-h);
+    --a-500: 0.650 0.190 var(--accent-h);
+    --a-600: 0.580 0.200 var(--accent-h);
+    --a-700: 0.500 0.185 var(--accent-h);
+    --a-800: 0.420 0.155 var(--accent-h);
+    --a-900: 0.350 0.120 var(--accent-h);
+    --a-950: 0.240 0.080 var(--accent-h);
+
+    /* ---- Success / profit ---- */
+    --su-50: 0.970 0.020 var(--success-h);
+    --su-100: 0.940 0.045 var(--success-h);
+    --su-200: 0.890 0.080 var(--success-h);
+    --su-300: 0.830 0.115 var(--success-h);
+    --su-400: 0.760 0.140 var(--success-h);
+    --su-500: 0.700 0.155 var(--success-h);
+    --su-600: 0.600 0.140 var(--success-h);
+    --su-700: 0.500 0.118 var(--success-h);
+    --su-800: 0.420 0.098 var(--success-h);
+    --su-900: 0.350 0.078 var(--success-h);
+    --su-950: 0.240 0.055 var(--success-h);
+
+    /* ---- Danger / loss ---- */
+    --da-50: 0.970 0.015 var(--danger-h);
+    --da-100: 0.940 0.032 var(--danger-h);
+    --da-200: 0.890 0.060 var(--danger-h);
+    --da-300: 0.820 0.100 var(--danger-h);
+    --da-400: 0.720 0.155 var(--danger-h);
+    --da-500: 0.640 0.195 var(--danger-h);
+    --da-600: 0.570 0.205 var(--danger-h);
+    --da-700: 0.490 0.180 var(--danger-h);
+    --da-800: 0.420 0.150 var(--danger-h);
+    --da-900: 0.360 0.120 var(--danger-h);
+    --da-950: 0.250 0.085 var(--danger-h);
+
+    /* ---- Warning ---- */
+    --wa-50: 0.980 0.020 var(--warning-h);
+    --wa-100: 0.950 0.045 var(--warning-h);
+    --wa-200: 0.910 0.080 var(--warning-h);
+    --wa-300: 0.870 0.115 var(--warning-h);
+    --wa-400: 0.820 0.140 var(--warning-h);
+    --wa-500: 0.760 0.145 var(--warning-h);
+    --wa-600: 0.660 0.135 var(--warning-h);
+    --wa-700: 0.550 0.115 var(--warning-h);
+    --wa-800: 0.450 0.095 var(--warning-h);
+    --wa-900: 0.380 0.078 var(--warning-h);
+    --wa-950: 0.250 0.055 var(--warning-h);
+
+    /* ---- Info / azure. Full ramp because `blue-*` and `sky-*` alias onto it. ---- */
+    --in-50: 0.970 0.015 var(--info-h);
+    --in-100: 0.940 0.032 var(--info-h);
+    --in-200: 0.890 0.060 var(--info-h);
+    --in-300: 0.820 0.095 var(--info-h);
+    --in-400: 0.740 0.130 var(--info-h);
+    --in-500: 0.680 0.140 var(--info-h);
+    --in-600: 0.580 0.150 var(--info-h);
+    --in-700: 0.500 0.135 var(--info-h);
+    --in-800: 0.420 0.110 var(--info-h);
+    --in-900: 0.350 0.088 var(--info-h);
+    --in-950: 0.240 0.060 var(--info-h);
+
+    /* ---- Radius: soft system, nested-radius aware ---- */
+    --r-sm: 6px;
+    --r-md: 8px;
+    --r-md-plus: 10px;
+    --r-lg: 12px;
+    --r-xl: 16px;
+    --r-2xl: 20px;
+
+    /* ---- Motion ---- */
+    --dur-micro: 120ms;
+    --dur-base: 200ms;
+    --dur-slow: 320ms;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    /* Critically damped — physical, monotonic, no overshoot */
+    --ease-snap: linear(
+      0, 0.05 5%, 0.19 10%, 0.39 17.5%, 0.57 25%, 0.72 32.5%,
+      0.83 40%, 0.9 47.5%, 0.95 55%, 0.975 62.5%, 0.99 72.5%, 1
+    );
+  }
+
+  /* ==========================================================================
+     Dark — the Luminance mode. Surfaces come forward by getting LIGHTER and
+     catch a 1px highlight on their top edge. Shadow is a supporting actor.
+     ========================================================================== */
+  :root.dark {
+    color-scheme: dark;
+
+    --s-canvas: 0.170 0.012 var(--neutral-h);
+    --s-surface: 0.210 0.014 var(--neutral-h);
+    --s-raised: 0.250 0.016 var(--neutral-h);
+    --s-overlay: 0.280 0.018 var(--neutral-h);
+    --s-inset: 0.140 0.010 var(--neutral-h);
+
+    --fg: 0.97 0.004 var(--neutral-h);
+    --fg-secondary: 0.80 0.010 var(--neutral-h);
+    --fg-muted: 0.65 0.012 var(--neutral-h);
+    --fg-faint: 0.52 0.012 var(--neutral-h);
+
+    --edge: oklch(1 0 0 / 0.08);
+    --edge-strong: oklch(1 0 0 / 0.14);
+    --edge-subtle: oklch(1 0 0 / 0.05);
+    --edge-highlight: oklch(1 0 0 / 0.1); /* the signature */
+
+    --lift-1:
+      inset 0 1px 0 0 var(--edge-highlight),
+      0 1px 2px -1px oklch(0 0 0 / 0.4);
+    --lift-2:
+      inset 0 1px 0 0 var(--edge-highlight),
+      0 2px 4px -2px oklch(0 0 0 / 0.4),
+      0 6px 16px -6px oklch(0 0 0 / 0.3);
+    --lift-3:
+      inset 0 1px 0 0 var(--edge-highlight),
+      0 8px 24px -8px oklch(0 0 0 / 0.5),
+      0 16px 48px -16px oklch(0 0 0 / 0.35);
+
+    --scrim: oklch(0.08 0.008 var(--neutral-h) / 0.7);
+  }
+
   html {
     @apply scroll-smooth;
+    scrollbar-gutter: stable;
   }
 
   body {
-    /* Cool slate foundation */
     @apply bg-surface-secondary text-foreground antialiased;
-    @apply dark:bg-surface-dark dark:text-foreground-dark;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
-  /* Typography defaults */
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight text-foreground;
-    @apply dark:text-foreground-dark;
+    text-wrap: balance;
   }
 
-  /* Tabular numbers for data */
+  p {
+    text-wrap: pretty;
+  }
+
   .tabular-nums {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Native controls pick up the accent */
+  input,
+  textarea,
+  select {
+    accent-color: oklch(var(--a-500));
+  }
+
+  /* --------------------------------------------------------------------------
+     Accessibility floor — outline, not box-shadow: an outline survives
+     `overflow: hidden` clipping and forced-colors mode.
+     -------------------------------------------------------------------------- */
+  :where(a, button, [role='button'], input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid oklch(var(--a-500) / 0.6);
+    outline-offset: 2px;
+    border-radius: inherit;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Blur is decorative; when it is unwelcome the scrim alone must carry it. */
+  @media (prefers-reduced-transparency: reduce) {
+    .overlay {
+      backdrop-filter: none;
+    }
+  }
+
+  @media (prefers-contrast: more) {
+    :root {
+      --edge: oklch(0 0 0 / 0.22);
+      --edge-subtle: oklch(0 0 0 / 0.14);
+    }
+
+    :root.dark {
+      --edge: oklch(1 0 0 / 0.24);
+      --edge-subtle: oklch(1 0 0 / 0.14);
+    }
   }
 }
 
 @layer components {
   /* ============================================
-     BUTTONS - Refined, minimal with clear hierarchy
+     BUTTONS
      ============================================ */
   .btn {
     @apply inline-flex items-center justify-center gap-2
            px-3 py-2 text-sm font-medium
-           rounded-md transition-all duration-150
-           focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+           rounded-md transition-colors
            disabled:opacity-50 disabled:cursor-not-allowed
            whitespace-nowrap select-none;
+    /* WCAG 2.2 §2.5.8 target size */
+    min-height: 32px;
+    transition-duration: var(--dur-micro);
+    transition-timing-function: var(--ease-out);
   }
 
+  /* Primary carries an inner top highlight so it reads as a lit object,
+     not a flat color swatch. */
   .btn-primary {
     @apply btn bg-accent-600 text-white
-           hover:bg-accent-700 active:bg-accent-800
-           focus-visible:ring-accent-500;
-    @apply dark:bg-accent-500 dark:hover:bg-accent-600 dark:active:bg-accent-700;
+           hover:bg-accent-500 active:bg-accent-700;
+    box-shadow: inset 0 1px 0 0 oklch(1 0 0 / 0.15);
   }
 
   .btn-secondary {
-    @apply btn bg-surface text-foreground
-           border border-border-strong
-           hover:bg-surface-secondary hover:border-border-strong
-           active:bg-surface-tertiary
-           focus-visible:ring-accent-500;
-    @apply dark:bg-surface-dark-secondary dark:text-foreground-dark
-           dark:border-border-dark-strong
-           dark:hover:bg-surface-dark-tertiary;
+    @apply btn bg-surface-tertiary text-foreground
+           border border-border-strong;
+    box-shadow: var(--lift-1);
+  }
+
+  .btn-secondary:hover {
+    background: color-mix(in oklab, oklch(var(--s-raised)), oklch(var(--fg)) 6%);
   }
 
   .btn-ghost {
     @apply btn bg-transparent text-foreground-secondary
-           hover:bg-surface-tertiary hover:text-foreground
-           active:bg-slate-200
-           focus-visible:ring-accent-500;
-    @apply dark:text-foreground-dark-secondary
-           dark:hover:bg-surface-dark-tertiary dark:hover:text-foreground-dark;
+           hover:bg-surface-tertiary hover:text-foreground;
   }
 
   .btn-danger {
     @apply btn bg-danger-600 text-white
-           hover:bg-danger-700 active:bg-danger-800
-           focus-visible:ring-danger-500;
-    @apply dark:bg-danger-500 dark:hover:bg-danger-600;
+           hover:bg-danger-500 active:bg-danger-700;
+    box-shadow: inset 0 1px 0 0 oklch(1 0 0 / 0.15);
   }
 
   .btn-sm {
     @apply px-2.5 py-1.5 text-xs gap-1.5;
+    min-height: 28px;
   }
 
   .btn-lg {
     @apply px-4 py-2.5 text-base gap-2.5;
+    min-height: 40px;
   }
 
   .btn-icon {
@@ -90,64 +337,74 @@
   }
 
   /* ============================================
-     FORM INPUTS - Clean borders, refined focus
+     FORM INPUTS — recessed. Data goes INTO them, so they take the inset
+     surface and never a lift.
      ============================================ */
   .input {
     @apply block w-full px-3 py-2 text-sm
-           bg-surface text-foreground
+           bg-surface-inset text-foreground
            border border-border-strong rounded-md
            placeholder:text-foreground-faint
-           transition-colors duration-150
-           focus:outline-none focus:border-accent-500 focus:ring-1 focus:ring-accent-500;
-    @apply dark:bg-surface-dark-secondary dark:text-foreground-dark
-           dark:border-border-dark-strong
-           dark:placeholder:text-foreground-dark-faint
-           dark:focus:border-accent-400 dark:focus:ring-accent-400;
+           transition-colors;
+    min-height: 32px;
+    transition-duration: var(--dur-micro);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .input:focus-visible {
+    @apply border-accent-500;
+    outline: 2px solid oklch(var(--a-500) / 0.55);
+    outline-offset: -1px;
   }
 
   .input-error {
-    @apply border-danger-500 focus:border-danger-500 focus:ring-danger-500;
-    @apply dark:border-danger-400 dark:focus:border-danger-400 dark:focus:ring-danger-400;
+    @apply border-danger-500;
   }
 
-  /* Select trigger for custom dropdowns */
+  .input-error:focus-visible {
+    outline-color: oklch(var(--da-500) / 0.55);
+  }
+
   .select-trigger {
     @apply input cursor-pointer
            inline-flex items-center justify-between gap-2
            whitespace-nowrap;
   }
 
-  /* Label styling */
   .label {
     @apply block text-sm font-medium text-foreground-secondary mb-1.5;
-    @apply dark:text-foreground-dark-secondary;
   }
 
   /* ============================================
-     CARDS - Borders-only approach, subtle surface shifts
+     CARDS — the base surface object
      ============================================ */
   .card {
-    @apply bg-surface rounded-lg
-           border border-border;
-    @apply dark:bg-surface-dark-secondary dark:border-border-dark;
+    @apply bg-surface rounded-lg border border-border;
+    box-shadow: var(--lift-1);
   }
 
   .card-elevated {
-    @apply card shadow-sm;
-    @apply dark:shadow-dark-sm;
+    @apply card;
+    box-shadow: var(--lift-2);
   }
 
   .card-interactive {
     @apply card cursor-pointer
-           transition-all duration-150
-           hover:border-border-strong hover:shadow-xs;
-    @apply dark:hover:border-border-dark-strong;
+           hover:border-border-strong;
+    transition:
+      border-color var(--dur-micro) var(--ease-out),
+      box-shadow var(--dur-micro) var(--ease-out),
+      translate var(--dur-micro) var(--ease-out);
   }
 
-  /* Card sections */
+  .card-interactive:hover {
+    box-shadow: var(--lift-2);
+    translate: 0 -1px;
+  }
+
+  /* Nested radius: 12px card − 4px inset = 8px inner. */
   .card-header {
     @apply px-4 py-3 border-b border-border;
-    @apply dark:border-border-dark;
   }
 
   .card-body {
@@ -155,12 +412,13 @@
   }
 
   .card-footer {
-    @apply px-4 py-3 border-t border-border bg-surface-secondary;
-    @apply dark:border-border-dark dark:bg-surface-dark-tertiary;
+    @apply px-4 py-3 border-t border-border bg-surface-inset;
+    border-end-start-radius: var(--r-lg);
+    border-end-end-radius: var(--r-lg);
   }
 
   /* ============================================
-     DATA DISPLAY - Monospace for numbers
+     DATA DISPLAY
      ============================================ */
   .data-value {
     @apply font-mono tabular-nums tracking-tight;
@@ -187,22 +445,21 @@
   }
 
   /* ============================================
-     BADGES - Subtle, refined
+     BADGES — tinted fill, colored text, no border
      ============================================ */
   .badge {
     @apply inline-flex items-center gap-1
            px-2 py-0.5 text-xs font-medium
-           rounded-md whitespace-nowrap;
+           rounded-sm whitespace-nowrap;
   }
 
   .badge-neutral {
     @apply badge bg-surface-tertiary text-foreground-secondary;
-    @apply dark:bg-surface-dark-tertiary dark:text-foreground-dark-secondary;
   }
 
   .badge-accent {
     @apply badge bg-accent-50 text-accent-700;
-    @apply dark:bg-accent-900/30 dark:text-accent-400;
+    @apply dark:bg-accent-900/30 dark:text-accent-300;
   }
 
   .badge-success {
@@ -220,26 +477,28 @@
     @apply dark:bg-warning-900/30 dark:text-warning-400;
   }
 
-  /* Pill variant - for tags */
   .badge-pill {
     @apply rounded-full px-2.5;
   }
 
   /* ============================================
-     NAVIGATION - Clean, minimal
+     NAVIGATION
      ============================================ */
   .nav-item {
     @apply flex items-center gap-3 px-3 py-2
            text-sm font-medium text-foreground-secondary
-           rounded-md transition-colors duration-150
+           rounded-md transition-colors
            hover:bg-surface-tertiary hover:text-foreground;
-    @apply dark:text-foreground-dark-secondary
-           dark:hover:bg-surface-dark-tertiary dark:hover:text-foreground-dark;
+    min-height: 36px;
+    transition-duration: var(--dur-micro);
+    transition-timing-function: var(--ease-out);
   }
 
+  /* Accent tint plus a left rule — never a full accent fill. */
   .nav-item-active {
     @apply bg-accent-50 text-accent-700;
-    @apply dark:bg-accent-900/20 dark:text-accent-400;
+    @apply dark:bg-accent-900/25 dark:text-accent-300;
+    box-shadow: inset 2px 0 0 0 oklch(var(--a-500));
   }
 
   .nav-item-active .nav-icon {
@@ -249,11 +508,10 @@
 
   .nav-icon {
     @apply w-5 h-5 text-foreground-muted shrink-0;
-    @apply dark:text-foreground-dark-muted;
   }
 
   /* ============================================
-     TABLES - Clean, data-focused
+     TABLES
      ============================================ */
   .table-container {
     @apply overflow-x-auto;
@@ -266,27 +524,29 @@
   .table th {
     @apply px-4 py-3 text-left text-xs font-medium
            text-foreground-muted uppercase tracking-wider
-           bg-surface-secondary border-b border-border;
-    @apply dark:text-foreground-dark-muted
-           dark:bg-surface-dark-tertiary dark:border-border-dark;
+           bg-surface-inset border-b border-border;
   }
 
   .table td {
     @apply px-4 py-3 border-b border-border-subtle;
-    @apply dark:border-border-dark-subtle;
   }
 
   .table tbody tr {
-    @apply transition-colors duration-100;
+    @apply transition-colors;
+    transition-duration: var(--dur-micro);
   }
 
   .table tbody tr:hover {
-    @apply bg-surface-secondary;
-    @apply dark:bg-surface-dark-tertiary;
+    @apply bg-surface-tertiary;
+  }
+
+  .table tbody tr[aria-selected='true'] {
+    @apply bg-accent-50 dark:bg-accent-900/25;
+    box-shadow: inset 2px 0 0 0 oklch(var(--a-500));
   }
 
   /* ============================================
-     STAT CARDS - For dashboard metrics
+     STAT CARDS
      ============================================ */
   .stat-card {
     @apply card p-4;
@@ -294,7 +554,6 @@
 
   .stat-label {
     @apply text-xs font-medium text-foreground-muted uppercase tracking-wider mb-1;
-    @apply dark:text-foreground-dark-muted;
   }
 
   .stat-value {
@@ -310,12 +569,10 @@
      ============================================ */
   .divider {
     @apply border-t border-border;
-    @apply dark:border-border-dark;
   }
 
   .divider-vertical {
     @apply border-l border-border h-full;
-    @apply dark:border-border-dark;
   }
 
   /* ============================================
@@ -327,37 +584,36 @@
 
   .empty-state-icon {
     @apply w-12 h-12 text-foreground-faint mb-4;
-    @apply dark:text-foreground-dark-faint;
   }
 
   .empty-state-title {
     @apply text-base font-medium text-foreground mb-1;
-    @apply dark:text-foreground-dark;
   }
 
   .empty-state-description {
     @apply text-sm text-foreground-muted max-w-sm;
-    @apply dark:text-foreground-dark-muted;
   }
 
   /* ============================================
      OVERLAYS & MODALS
      ============================================ */
   .overlay {
-    @apply fixed inset-0 bg-slate-900/60 backdrop-blur-sm;
-    @apply dark:bg-black/70;
+    @apply fixed inset-0;
+    background: var(--scrim);
+    backdrop-filter: blur(4px);
   }
 
+  /* Overlay sits on --s-overlay: a modal never lands on a color darker than
+     the page behind it. Elevation stays monotonic. */
   .modal {
-    @apply bg-surface rounded-xl shadow-md
+    @apply bg-surface-overlay rounded-xl
            border border-border
-           max-w-lg w-full max-h-[90vh] overflow-auto;
-    @apply dark:bg-surface-dark-secondary dark:border-border-dark;
+           max-w-lg w-full max-h-[90dvh] overflow-auto;
+    box-shadow: var(--lift-3);
   }
 
   .modal-header {
     @apply px-5 py-4 border-b border-border;
-    @apply dark:border-border-dark;
   }
 
   .modal-body {
@@ -365,8 +621,9 @@
   }
 
   .modal-footer {
-    @apply px-5 py-4 border-t border-border bg-surface-secondary flex justify-end gap-3;
-    @apply dark:border-border-dark dark:bg-surface-dark-tertiary;
+    @apply px-5 py-4 border-t border-border bg-surface-inset flex justify-end gap-3;
+    border-end-start-radius: var(--r-xl);
+    border-end-end-radius: var(--r-xl);
   }
 
   /* ============================================
@@ -374,19 +631,20 @@
      ============================================ */
   .dropdown-menu {
     @apply absolute z-50 mt-1 py-1 min-w-[8rem]
-           bg-surface rounded-lg shadow-md
+           bg-surface-overlay rounded-lg
            border border-border
-           animate-fade-in;
-    @apply dark:bg-surface-dark-secondary dark:border-border-dark;
+           animate-scale-in;
+    box-shadow: var(--lift-3);
+    transform-origin: top;
   }
 
   .dropdown-item {
     @apply flex items-center gap-2 px-3 py-2
            text-sm text-foreground
-           cursor-pointer transition-colors duration-100
+           cursor-pointer transition-colors
            hover:bg-surface-tertiary;
-    @apply dark:text-foreground-dark
-           dark:hover:bg-surface-dark-tertiary;
+    min-height: 32px;
+    transition-duration: var(--dur-micro);
   }
 
   .dropdown-item-danger {
@@ -401,24 +659,27 @@
     @apply inline-flex items-center gap-1.5
            px-3 py-1.5 text-sm font-medium
            rounded-full border border-transparent
-           transition-all duration-150 cursor-pointer
-           bg-surface-tertiary text-foreground-secondary
-           hover:bg-slate-200;
-    @apply dark:bg-surface-dark-tertiary dark:text-foreground-dark-secondary
-           dark:hover:bg-slate-700;
+           transition-colors cursor-pointer
+           bg-surface-tertiary text-foreground-secondary;
+    min-height: 28px;
+    transition-duration: var(--dur-micro);
+    transition-timing-function: var(--ease-out);
+  }
+
+  .filter-chip:hover {
+    background: color-mix(in oklab, oklch(var(--s-raised)), oklch(var(--fg)) 8%);
   }
 
   .filter-chip-active {
     @apply bg-accent-50 text-accent-700 border-accent-200;
-    @apply dark:bg-accent-900/30 dark:text-accent-400 dark:border-accent-700/50;
+    @apply dark:bg-accent-900/30 dark:text-accent-300 dark:border-accent-800;
   }
 
   /* ============================================
      SKELETON LOADERS
      ============================================ */
   .skeleton {
-    @apply bg-surface-tertiary rounded animate-pulse;
-    @apply dark:bg-surface-dark-tertiary;
+    @apply bg-surface-tertiary rounded-sm animate-pulse;
   }
 
   .skeleton-text {
@@ -435,7 +696,6 @@
 }
 
 @layer utilities {
-  /* Hide scrollbar but allow scrolling */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -445,7 +705,11 @@
     display: none;
   }
 
-  /* Safe area insets for mobile */
+  /* Scroll panels shouldn't chain their overscroll to the page. */
+  .scroll-contain {
+    overscroll-behavior: contain;
+  }
+
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
@@ -454,13 +718,11 @@
     padding-top: env(safe-area-inset-top);
   }
 
-  /* Focus ring utility */
-  .focus-ring {
-    @apply focus:outline-none focus-visible:ring-2
-           focus-visible:ring-accent-500 focus-visible:ring-offset-2;
+  .focus-ring:focus-visible {
+    outline: 2px solid oklch(var(--a-500) / 0.6);
+    outline-offset: 2px;
   }
 
-  /* Truncate with ellipsis */
   .truncate-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -468,24 +730,19 @@
     overflow: hidden;
   }
 
-  /* Text color utilities using design system */
   .text-primary {
     @apply text-foreground;
-    @apply dark:text-foreground-dark;
   }
 
   .text-secondary {
     @apply text-foreground-secondary;
-    @apply dark:text-foreground-dark-secondary;
   }
 
   .text-muted {
     @apply text-foreground-muted;
-    @apply dark:text-foreground-dark-muted;
   }
 
   .text-faint {
     @apply text-foreground-faint;
-    @apply dark:text-foreground-dark-faint;
   }
 }

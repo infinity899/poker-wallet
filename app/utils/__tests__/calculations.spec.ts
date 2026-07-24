@@ -1,14 +1,18 @@
-import type { CashSession, Tournament } from '~/types';
+import type { CashSession, Expense, Tournament } from '~/types';
 import { describe, expect, it } from 'vitest';
 import {
   calculateBuyInBreakdown,
   calculateCumulativeProfit,
+  calculateExpensesByCategory,
+  calculateExpenseStats,
   calculateHourlyRateTrend,
   calculateITMTrend,
   calculateProfitDistribution,
   calculateROITrend,
   calculateSessionStats,
   calculateTournamentStats,
+  calculateTripPnL,
+  calculateTripsStats,
   calculateWinningsBySite,
   getTournamentNetProfit,
 } from '../calculations';
@@ -46,6 +50,22 @@ function createTournament(overrides: Partial<Tournament> = {}): Tournament {
     winnings: 0,
     tags: [],
     status: 'completed',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+function createExpense(overrides: Partial<Expense> = {}): Expense {
+  return {
+    id: crypto.randomUUID(),
+    date: '2024-01-15',
+    category: 'food',
+    amount: 100,
+    originalCurrency: 'USD',
+    originalAmount: 100,
+    exchangeRate: 1,
+    tags: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     ...overrides,
@@ -474,5 +494,213 @@ describe('calculateWinningsBySite', () => {
     const other = result[result.length - 1];
     expect(other?.site).toBe('Other');
     expect(other?.winnings).toBe(200 + 100); // Site3 (200) + Site4 (100)
+  });
+});
+
+describe('calculateExpensesByCategory', () => {
+  it('returns empty array for no expenses', () => {
+    expect(calculateExpensesByCategory([])).toHaveLength(0);
+  });
+
+  it('aggregates per category, sorted desc with an alphabetical tiebreak', () => {
+    const expenses = [
+      createExpense({ category: 'food', amount: 100 }),
+      createExpense({ category: 'food', amount: 50 }),
+      createExpense({ category: 'travel', amount: 400 }),
+      createExpense({ category: 'accommodation', amount: 400 }),
+    ];
+
+    const result = calculateExpensesByCategory(expenses);
+
+    // accommodation and travel tie at 400 -> alphabetical tiebreak puts accommodation first
+    expect(result.map(c => c.category)).toEqual(['accommodation', 'travel', 'food']);
+    expect(result[2]?.amount).toBe(150);
+  });
+
+  it('includes the human label for each category', () => {
+    const result = calculateExpensesByCategory([createExpense({ category: 'food', amount: 10 })]);
+    expect(result[0]?.label).toBe('Food & Drink');
+  });
+
+  it('skips non-positive amounts', () => {
+    const expenses = [
+      createExpense({ category: 'food', amount: 0 }),
+      createExpense({ category: 'travel', amount: -20 }),
+      createExpense({ category: 'fees', amount: 30 }),
+    ];
+
+    const result = calculateExpensesByCategory(expenses);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.category).toBe('fees');
+  });
+
+  it('folds overflow past maxSlices into a new "Other" bucket', () => {
+    const expenses = [
+      createExpense({ category: 'accommodation', amount: 400 }),
+      createExpense({ category: 'travel', amount: 300 }),
+      createExpense({ category: 'food', amount: 200 }),
+      createExpense({ category: 'fees', amount: 100 }),
+    ];
+
+    const result = calculateExpensesByCategory(expenses, 2);
+
+    expect(result).toHaveLength(3);
+    expect(result[2]?.category).toBe('other');
+    expect(result[2]?.amount).toBe(300); // food 200 + fees 100
+  });
+
+  it('merges overflow into an existing "Other" slice instead of duplicating it', () => {
+    const expenses = [
+      createExpense({ category: 'other', amount: 500 }),
+      createExpense({ category: 'accommodation', amount: 400 }),
+      createExpense({ category: 'travel', amount: 400 }),
+      createExpense({ category: 'food', amount: 150 }),
+    ];
+
+    const result = calculateExpensesByCategory(expenses, 2);
+
+    expect(result).toHaveLength(2);
+    const other = result.find(c => c.category === 'other');
+    expect(other?.amount).toBe(500 + 400 + 150); // other + overflow (travel, food)
+  });
+});
+
+describe('calculateExpenseStats', () => {
+  it('returns zero stats for empty array', () => {
+    const stats = calculateExpenseStats([]);
+    expect(stats.totalExpenses).toBe(0);
+    expect(stats.expenseCount).toBe(0);
+    expect(stats.avgExpense).toBe(0);
+    expect(stats.biggestExpense).toBe(0);
+    expect(stats.byCategory).toHaveLength(0);
+  });
+
+  it('calculates totals, average and biggest', () => {
+    const expenses = [
+      createExpense({ amount: 100, category: 'food' }),
+      createExpense({ amount: 250, category: 'travel' }),
+      createExpense({ amount: 50, category: 'food' }),
+    ];
+
+    const stats = calculateExpenseStats(expenses);
+
+    expect(stats.totalExpenses).toBe(400);
+    expect(stats.expenseCount).toBe(3);
+    expect(stats.avgExpense).toBeCloseTo(133.33, 1);
+    expect(stats.biggestExpense).toBe(250);
+    expect(stats.byCategory).toHaveLength(2);
+  });
+});
+
+describe('calculateTripPnL', () => {
+  it('returns zeroed figures for an empty trip without NaN', () => {
+    const pnl = calculateTripPnL([], []);
+
+    expect(pnl.buyIns).toBe(0);
+    expect(pnl.grossProfit).toBe(0);
+    expect(pnl.netProfit).toBe(0);
+    expect(pnl.roi).toBe(0);
+    expect(pnl.netRoi).toBe(0);
+    expect(Number.isNaN(pnl.roi)).toBe(false);
+    expect(Number.isNaN(pnl.netRoi)).toBe(false);
+  });
+
+  it('computes gross and net figures', () => {
+    const tournaments = [
+      createTournament({ buyIn: 1000, fee: 100, entries: 0, winnings: 0 }),
+      createTournament({ buyIn: 300, fee: 30, entries: 0, winnings: 3000 }),
+    ];
+    const expenses = [
+      createExpense({ amount: 500 }),
+      createExpense({ amount: 200 }),
+    ];
+
+    const pnl = calculateTripPnL(tournaments, expenses);
+
+    expect(pnl.buyIns).toBe(1430);
+    expect(pnl.cashes).toBe(3000);
+    expect(pnl.grossProfit).toBe(1570);
+    expect(pnl.totalExpenses).toBe(700);
+    expect(pnl.netProfit).toBe(870);
+    expect(pnl.roi).toBeCloseTo(109.79, 1); // 1570 / 1430
+    expect(pnl.netRoi).toBeCloseTo(40.85, 1); // 870 / 2130
+    expect(pnl.tournamentCount).toBe(2);
+    expect(pnl.expenseCount).toBe(2);
+  });
+
+  it('guards ROI when a trip has expenses but no tournaments', () => {
+    const pnl = calculateTripPnL([], [createExpense({ amount: 250 })]);
+
+    expect(pnl.roi).toBe(0);
+    expect(pnl.grossProfit).toBe(0);
+    expect(pnl.netProfit).toBe(-250);
+    expect(pnl.netRoi).toBe(-100);
+  });
+
+  it('excludes in-progress tournaments', () => {
+    const tournaments = [
+      createTournament({ buyIn: 100, fee: 0, entries: 0, winnings: 300 }),
+      createTournament({ buyIn: 5000, fee: 0, entries: 0, winnings: 0, status: 'in_progress' }),
+    ];
+
+    const pnl = calculateTripPnL(tournaments, []);
+
+    expect(pnl.tournamentCount).toBe(1);
+    expect(pnl.buyIns).toBe(100);
+    expect(pnl.grossProfit).toBe(200);
+  });
+
+  it('uses bankroll deltas for multi-site session tournaments', () => {
+    const tournaments = [
+      createTournament({
+        isSession: true,
+        sites: [{ name: 'PokerStars', bankrollInitial: 1000, bankrollFinal: 1400 }],
+      }),
+    ];
+
+    const pnl = calculateTripPnL(tournaments, []);
+
+    expect(pnl.grossProfit).toBe(400);
+  });
+
+  it('includes the per-category expense breakdown', () => {
+    const pnl = calculateTripPnL([], [
+      createExpense({ category: 'travel', amount: 300 }),
+      createExpense({ category: 'food', amount: 100 }),
+    ]);
+
+    expect(pnl.expensesByCategory.map(c => c.category)).toEqual(['travel', 'food']);
+  });
+});
+
+describe('calculateTripsStats', () => {
+  it('sums totals and recomputes ROI from the sums', () => {
+    const a = calculateTripPnL(
+      [createTournament({ buyIn: 100, fee: 0, entries: 0, winnings: 300 })],
+      [createExpense({ amount: 100, category: 'food' })],
+    );
+    const b = calculateTripPnL(
+      [createTournament({ buyIn: 900, fee: 0, entries: 0, winnings: 0 })],
+      [createExpense({ amount: 100, category: 'travel' })],
+    );
+
+    const stats = calculateTripsStats([a, b]);
+
+    expect(stats.totalTrips).toBe(2);
+    expect(stats.buyIns).toBe(1000);
+    expect(stats.grossProfit).toBe(-700); // +200 and -900
+    expect(stats.totalExpenses).toBe(200);
+    expect(stats.netProfit).toBe(-900);
+    expect(stats.roi).toBeCloseTo(-70, 5); // -700 / 1000, NOT the average of the two ROIs
+    expect(stats.netRoi).toBeCloseTo(-75, 5); // -900 / 1200
+    expect(stats.expensesByCategory).toHaveLength(2);
+  });
+
+  it('returns zeros for no trips', () => {
+    const stats = calculateTripsStats([]);
+    expect(stats.totalTrips).toBe(0);
+    expect(stats.roi).toBe(0);
+    expect(stats.netRoi).toBe(0);
   });
 });

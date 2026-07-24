@@ -60,6 +60,7 @@ const menuItems: MenuItem[] = [
   { id: 'cash', label: 'Cash Session', path: '/sessions/new', color: 'bg-success-500' },
   { id: 'tournament', label: 'Tournament', path: '/tournaments/new', color: 'bg-violet-500' },
   { id: 'tournament-session', label: 'Tournament Session', action: 'logTournamentSession', color: 'bg-purple-500' },
+  { id: 'trip', label: 'Trip', path: '/trips/new', color: 'bg-sky-500' },
 ];
 
 function handleFabClick() {

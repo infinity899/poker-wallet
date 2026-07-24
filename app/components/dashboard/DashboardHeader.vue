@@ -9,7 +9,7 @@
       </p>
     </div>
 
-    <div class="flex flex-wrap gap-1.5">
+    <div class="flex flex-wrap items-center gap-1.5">
       <button
         class="filter-chip"
         :class="{ 'filter-chip-active': showCash }"
@@ -38,6 +38,27 @@
       >
         Online
       </button>
+
+      <span class="w-px h-5 bg-border dark:bg-border-dark mx-1" />
+
+      <!--
+        Not a data-type filter: this changes how the stats are computed, so it is a
+        checkbox rather than a chip. Default off - stats stay gross until ticked.
+      -->
+      <label
+        class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer select-none hover:bg-surface-tertiary dark:hover:bg-surface-dark-tertiary transition-colors"
+        title="Subtract logged trip expenses from your profit figures"
+      >
+        <input
+          type="checkbox"
+          :checked="includeExpenses"
+          class="rounded border-border dark:border-border-dark text-accent-600 focus:ring-accent-500"
+          @change="emit('update:includeExpenses', !includeExpenses)"
+        >
+        <span class="text-xs font-medium text-foreground-secondary dark:text-foreground-dark-secondary whitespace-nowrap">
+          Include expenses
+        </span>
+      </label>
     </div>
   </div>
 </template>
@@ -48,6 +69,7 @@ defineProps<{
   showTournaments: boolean;
   showLive: boolean;
   showOnline: boolean;
+  includeExpenses: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -55,5 +77,6 @@ const emit = defineEmits<{
   'update:showTournaments': [value: boolean];
   'update:showLive': [value: boolean];
   'update:showOnline': [value: boolean];
+  'update:includeExpenses': [value: boolean];
 }>();
 </script>

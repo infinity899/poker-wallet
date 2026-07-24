@@ -63,6 +63,7 @@ const authStore = useAuthStore();
 const sessionsStore = useSessionsStore();
 const tournamentsStore = useTournamentsStore();
 const communitiesStore = useCommunitiesStore();
+const tripsStore = useTripsStore();
 
 const loading = ref(false);
 
@@ -100,6 +101,7 @@ async function setDataMode(isDemo: boolean) {
       sessionsStore.reload(),
       tournamentsStore.reload(),
       communitiesStore.reload(),
+      tripsStore.reload(),
     ]);
   }
   finally {

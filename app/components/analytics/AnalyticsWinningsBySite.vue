@@ -29,27 +29,22 @@ const props = defineProps<{
 }>();
 
 const { pieChartOptions } = useCurrencyChartOptions();
-const themeStore = useThemeStore();
-
-// Fixed categorical palette (600-level, validated for CVD in light & dark).
-// Colors follow slice order; "Other" always takes the neutral slate.
-const SITE_COLORS = [
-  '#2563eb', // blue
-  '#059669', // emerald
-  '#d97706', // amber
-  '#7c3aed', // violet
-  '#db2777', // pink
-  '#0891b2', // cyan
-  '#ea580c', // orange
-];
-const OTHER_COLOR = '#64748b';
+const { tokens } = useThemeTokens();
 
 const slices = computed(() => calculateWinningsBySite(props.tournaments));
 const hasData = computed(() => slices.value.length > 0);
 
 const chartData = computed(() => {
-  // Match the arc borders to the card surface so slices read as separated (relief for CVD).
-  const borderColor = themeStore.isDark ? '#1e293b' : '#ffffff';
+  /*
+   * Categorical palette derived from the accent hue and held at one lightness,
+   * so no slice outranks another and the set survives CVD simulation. "Other"
+   * stays deliberately desaturated — it is a residual, not a category.
+   */
+  const SITE_COLORS = tokens.value.series;
+  const OTHER_COLOR = tokens.value.tick;
+
+  // Match the arc borders to the card surface so slices read as separated.
+  const borderColor = tokens.value.surface;
 
   return {
     labels: slices.value.map(s => s.site),

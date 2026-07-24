@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CashSession, DbSession, DbTournament, Tournament } from '~/types';
 import { useTypedSupabaseClient } from '~/composables/useTypedSupabase';
 
@@ -139,7 +140,12 @@ export function tournamentToDbTournament(tournament: Omit<Tournament, 'id' | 'cr
 
 // Database operations composable
 export function useDatabase() {
-  const supabase = useTypedSupabaseClient();
+  // Untyped client on purpose. With the hand-written `Database` generic,
+  // supabase-js 2.89 resolves `.update()`'s parameter to `never` (inserts are
+  // unaffected), so typed update calls cannot compile. SupabaseAdapter takes an
+  // untyped client for the same reason - the row shapes are asserted explicitly
+  // at the mapping boundary instead.
+  const supabase = useTypedSupabaseClient() as SupabaseClient;
   const user = useSupabaseUser();
   const authStore = useAuthStore();
 
@@ -267,7 +273,7 @@ export function useDatabase() {
 
     const { data, error } = await supabase
       .from('sessions')
-      .update(dbUpdates as any)
+      .update(dbUpdates as Partial<Omit<DbSession, 'id' | 'user_id' | 'created_at'>>)
       .eq('id', id)
       .eq('user_id', userId.value)
       .select()
@@ -411,7 +417,7 @@ export function useDatabase() {
 
     const { data, error } = await supabase
       .from('tournaments')
-      .update(dbUpdates as any)
+      .update(dbUpdates as Partial<Omit<DbTournament, 'id' | 'user_id' | 'created_at'>>)
       .eq('id', id)
       .eq('user_id', userId.value)
       .select()

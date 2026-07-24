@@ -67,6 +67,39 @@ export interface DbTournament {
   updated_at: string;
 }
 
+export interface DbTrip {
+  id: string;
+  user_id: string;
+  name: string;
+  venue: string | null;
+  location: string | null;
+  date: string; // trip START date (column MUST be `date` — SupabaseAdapter orders by it)
+  end_date: string;
+  currency: 'USD' | 'EUR' | 'GBP' | 'CAD' | 'RON' | null;
+  tournament_ids: string[]; // TEXT[] — denormalized link, stale ids filtered on read
+  notes: string | null;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbExpense {
+  id: string;
+  user_id: string;
+  trip_id: string | null; // nullable: standalone expenses allowed
+  date: string;
+  category: 'travel' | 'accommodation' | 'food' | 'transport' | 'fees' | 'entertainment' | 'other';
+  description: string | null;
+  amount: number; // ALWAYS USD
+  original_currency: 'USD' | 'EUR' | 'GBP' | 'CAD' | 'RON' | null;
+  original_amount: number | null;
+  exchange_rate: number | null;
+  notes: string | null;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DbHorse {
   id: string;
   user_id: string;
@@ -164,6 +197,18 @@ export interface Database {
         Row: DbTournament;
         Insert: Omit<DbTournament, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<DbTournament, 'id' | 'user_id' | 'created_at'>>;
+        Relationships: [];
+      };
+      trips: {
+        Row: DbTrip;
+        Insert: Omit<DbTrip, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<DbTrip, 'id' | 'user_id' | 'created_at'>>;
+        Relationships: [];
+      };
+      expenses: {
+        Row: DbExpense;
+        Insert: Omit<DbExpense, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<DbExpense, 'id' | 'user_id' | 'created_at'>>;
         Relationships: [];
       };
       horses: {

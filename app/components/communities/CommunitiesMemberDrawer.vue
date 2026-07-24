@@ -138,7 +138,7 @@
               </div>
 
               <!-- Member Profit Chart -->
-              <div v-if="chartData.labels.length > 0" class="card p-4">
+              <div v-if="(chartData.labels?.length ?? 0) > 0" class="card p-4">
                 <h3 class="text-sm font-semibold text-foreground dark:text-foreground-dark mb-4">
                   Cumulative Profit
                 </h3>
@@ -296,10 +296,12 @@ const displayName = computed(() => {
 
 const memberInitial = computed(() => displayName.value.charAt(0).toUpperCase());
 
-const memberColor = computed(() => {
+const memberColor = computed<string>(() => {
   const members = props.communityId ? communitiesStore.getCommunityMembers(props.communityId) : [];
   const index = members.findIndex(m => m.id === props.member?.id);
-  return COMMUNITY_MEMBER_COLORS[Math.max(0, index) % COMMUNITY_MEMBER_COLORS.length];
+  // The modulo always lands in range; the ?? satisfies noUncheckedIndexedAccess.
+  return COMMUNITY_MEMBER_COLORS[Math.max(0, index) % COMMUNITY_MEMBER_COLORS.length]
+    ?? COMMUNITY_MEMBER_COLORS[0]!;
 });
 
 // Get member sessions from community cache (not the user's session store)
@@ -380,7 +382,7 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
         padding: 10,
         callbacks: {
           label: (context) => {
-            return formatCurrency(context.parsed.y);
+            return formatCurrency(context.parsed.y ?? 0);
           },
         },
       },

@@ -3,8 +3,8 @@
     <!-- Logo -->
     <div class="px-5 py-5 border-b border-border dark:border-border-dark">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 bg-accent-600 dark:bg-accent-500 rounded-lg flex items-center justify-center">
-          <span class="text-white font-semibold text-base">P</span>
+        <div class="w-9 h-9 bg-accent-600 dark:bg-accent-500 rounded-lg flex items-center justify-center text-white shrink-0">
+          <AppLogo :size="21" />
         </div>
         <div>
           <h1 class="text-base font-semibold text-foreground dark:text-foreground-dark tracking-tight">
@@ -94,6 +94,7 @@ import {
   ChartBarIcon,
   Cog6ToothIcon,
   HomeIcon,
+  MapIcon,
   TrophyIcon,
   UserGroupIcon,
 } from '@heroicons/vue/24/outline';
@@ -105,6 +106,7 @@ const navItems = [
   { path: '/', label: 'Dashboard', icon: HomeIcon },
   { path: '/sessions', label: 'Cash Sessions', icon: BanknotesIcon },
   { path: '/tournaments', label: 'Tournaments', icon: TrophyIcon },
+  { path: '/trips', label: 'Trips', icon: MapIcon },
   { path: '/communities', label: 'My Communities', icon: UserGroupIcon },
   { path: '/analytics', label: 'Analytics', icon: ChartBarIcon },
 ];

@@ -4,6 +4,7 @@ import { useCurrencyStore } from '~/stores/currency';
 import { useReferenceStore } from '~/stores/reference';
 import { useSessionsStore } from '~/stores/sessions';
 import { useTournamentsStore } from '~/stores/tournaments';
+import { useTripsStore } from '~/stores/trips';
 
 export default defineNuxtPlugin(async () => {
   // Initialize auth store first to determine demo mode
@@ -19,6 +20,7 @@ export default defineNuxtPlugin(async () => {
   const tournamentsStore = useTournamentsStore();
   const referenceStore = useReferenceStore();
   const communitiesStore = useCommunitiesStore();
+  const tripsStore = useTripsStore();
 
   // Initialize all stores in parallel
   await Promise.all([
@@ -26,5 +28,6 @@ export default defineNuxtPlugin(async () => {
     tournamentsStore.initialize(),
     referenceStore.initialize(),
     communitiesStore.initialize(),
+    tripsStore.initialize(),
   ]);
 });
