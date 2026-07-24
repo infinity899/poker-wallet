@@ -131,6 +131,43 @@ export function useCurrencyChartOptions() {
     },
   }));
 
+  /**
+   * Minimal inline chart (sparkline): no axes, grid or legend — just the shape,
+   * with a currency-aware tooltip on hover.
+   */
+  const sparklineChartOptions = computed<ChartOptions<'line'>>(() => {
+    void displayCurrency.value;
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipStyle,
+          displayColors: false,
+          callbacks: {
+            label: (context) => {
+              const value = context.raw as number;
+              if (value === null || value === undefined) {
+                return '';
+              }
+              return formatAmount(value);
+            },
+          },
+        },
+      },
+      scales: {
+        x: { display: false },
+        y: { display: false },
+      },
+      elements: {
+        point: { radius: 0, hoverRadius: 4, hoverBorderWidth: 2 },
+        line: { borderWidth: 2 },
+      },
+    };
+  });
+
   const pieChartOptions = computed<ChartOptions<'pie'>>(() => {
     void displayCurrency.value; // refresh tooltip amounts when display currency changes
     return {
@@ -166,5 +203,11 @@ export function useCurrencyChartOptions() {
     };
   });
 
-  return { lineChartOptions, barChartOptions, percentLineChartOptions, pieChartOptions };
+  return {
+    lineChartOptions,
+    barChartOptions,
+    percentLineChartOptions,
+    sparklineChartOptions,
+    pieChartOptions,
+  };
 }

@@ -89,6 +89,29 @@
           </p>
         </div>
       </div>
+
+      <div
+        v-if="cumulativeData.labels.length > 0"
+        class="mt-6 pt-4 border-t border-border dark:border-border-dark"
+      >
+        <div class="flex items-baseline justify-between gap-4 mb-2">
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            Cumulative Profit
+          </p>
+          <p
+            class="text-sm font-semibold"
+            :class="stats.totalProfit >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
+          >
+            {{ formatDisplayProfit(stats.totalProfit) }}
+          </p>
+        </div>
+        <div class="h-20">
+          <Line
+            :data="cumulativeData"
+            :options="sparklineChartOptions"
+          />
+        </div>
+      </div>
     </div>
 
     <div class="lg:col-span-2">
@@ -133,8 +156,8 @@ const props = defineProps<{
   stats: TournamentStats;
 }>();
 
-const { formatAmount } = useCurrency();
-const { lineChartOptions } = useCurrencyChartOptions();
+const { formatAmount, formatDisplayProfit } = useCurrency();
+const { lineChartOptions, sparklineChartOptions } = useCurrencyChartOptions();
 
 const cumulativeData = computed(() => {
   const data = calculateCumulativeProfit(
