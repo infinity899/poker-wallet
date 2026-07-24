@@ -11,9 +11,9 @@ const tooltipStyle = {
   borderWidth: 1,
   padding: 12,
   cornerRadius: 6,
-  titleFont: { size: 12, weight: '600' },
+  titleFont: { size: 12, weight: 600 },
   bodyFont: { size: 11 },
-} as const;
+};
 
 /**
  * Display-currency-aware Chart.js option factories for analytics/dashboard charts.

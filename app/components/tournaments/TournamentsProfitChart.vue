@@ -94,7 +94,7 @@ const chartOptions: ChartOptions<'line'> = {
       cornerRadius: 6,
       titleFont: {
         size: 12,
-        weight: '600',
+        weight: 600,
       },
       bodyFont: {
         size: 11,
