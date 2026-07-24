@@ -6,7 +6,7 @@ import { createTournamentAdapter } from '~/adapters/tournamentAdapter';
 import { isDateInRange } from '~/composables/useFilters';
 import { useTypedSupabaseClient } from '~/composables/useTypedSupabase';
 import { DEFAULT_TOURNAMENT_FILTERS } from '~/types';
-import { calculateTournamentStats } from '~/utils/calculations';
+import { calculateTournamentStats, getTournamentNetProfit } from '~/utils/calculations';
 
 export const useTournamentsStore = defineStore('tournaments', () => {
   const supabase = useTypedSupabaseClient();
@@ -334,15 +334,7 @@ export const useTournamentsStore = defineStore('tournaments', () => {
 
   // Helper to calculate profit for a tournament
   function getTournamentProfit(t: Tournament): number {
-    // For sessions, calculate profit from bankroll data in sites array
-    if (t.isSession && t.sites && t.sites.length > 0) {
-      const totalInitial = t.sites.reduce((sum, site) => sum + (site.bankrollInitial || 0), 0);
-      const totalFinal = t.sites.reduce((sum, site) => sum + (site.bankrollFinal || 0), 0);
-      return totalFinal - totalInitial;
-    }
-    // For single tournaments, use standard formula
-    const totalCost = (t.buyIn + t.fee) * (t.entries + 1);
-    return t.winnings - totalCost;
+    return getTournamentNetProfit(t);
   }
 
   return {

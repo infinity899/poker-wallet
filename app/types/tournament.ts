@@ -56,6 +56,18 @@ export interface TournamentStats {
   avgFinish: number;
   bestFinish: number;
   avgFieldSize: number;
+  avgCashMultiple: number; // mean winnings / cost across cashed tournaments
+  biggestCash: number; // largest single prize won
+}
+
+export interface BuyInLevelStats {
+  min: number;
+  max: number | null; // null = open-ended top bucket
+  count: number;
+  totalCost: number;
+  totalProfit: number;
+  roi: number; // percent
+  itmPercentage: number; // percent
 }
 
 export type NewTournament = Omit<Tournament, 'id' | 'createdAt' | 'updatedAt'>;

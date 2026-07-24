@@ -72,7 +72,7 @@
             Best Session
           </p>
           <p class="text-xl font-bold text-success-600 dark:text-success-400">
-            {{ formatCurrency(stats.bestSession) }}
+            {{ formatAmount(stats.bestSession) }}
           </p>
         </div>
         <div>
@@ -80,7 +80,7 @@
             Worst Session
           </p>
           <p class="text-xl font-bold text-danger-600 dark:text-danger-400">
-            {{ formatCurrency(stats.worstSession) }}
+            {{ formatAmount(stats.worstSession) }}
           </p>
         </div>
         <div>
@@ -91,7 +91,7 @@
             class="text-xl font-bold"
             :class="stats.avgProfit >= 0 ? 'text-success-600 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'"
           >
-            {{ formatCurrency(stats.avgProfit) }}
+            {{ formatAmount(stats.avgProfit) }}
           </p>
         </div>
         <div>
@@ -121,7 +121,6 @@
 <script setup lang="ts">
 import type { SessionStats } from '~/types';
 import { Bar, Line } from 'vue-chartjs';
-import { formatCurrency } from '~/utils/formatters';
 
 defineProps<{
   cumulativeData: {
@@ -146,47 +145,6 @@ defineProps<{
   stats: SessionStats;
 }>();
 
-const lineChartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: false,
-    },
-    tooltip: {
-      callbacks: {
-        label: (context: any) => formatCurrency(context.raw as number),
-      },
-    },
-  },
-  scales: {
-    y: {
-      ticks: {
-        callback: (value: any) => formatCurrency(value as number),
-      },
-    },
-  },
-};
-
-const barChartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: false,
-    },
-    tooltip: {
-      callbacks: {
-        label: (context: any) => formatCurrency(context.raw as number),
-      },
-    },
-  },
-  scales: {
-    y: {
-      ticks: {
-        callback: (value: any) => formatCurrency(value as number),
-      },
-    },
-  },
-};
+const { formatAmount } = useCurrency();
+const { lineChartOptions, barChartOptions } = useCurrencyChartOptions();
 </script>

@@ -1,4 +1,4 @@
-import type { CashSession, SessionStats, Tournament, TournamentStats } from '~/types';
+import type { BuyInLevelStats, CashSession, SessionStats, Tournament, TournamentStats } from '~/types';
 
 /**
  * Calculate duration in minutes from start and end times
@@ -93,6 +93,35 @@ export function calculateSessionStats(sessions: CashSession[]): SessionStats {
   };
 }
 
+/**
+ * Total cost of a tournament including fees and re-entries.
+ */
+export function getTournamentCost(t: Tournament): number {
+  return (t.buyIn + t.fee) * (t.entries + 1);
+}
+
+/**
+ * Net profit of a single tournament.
+ * For multi-site sessions, derive profit from bankroll deltas across sites;
+ * otherwise use winnings minus total cost.
+ */
+export function getTournamentNetProfit(t: Tournament): number {
+  if (t.isSession && t.sites && t.sites.length > 0) {
+    const totalInitial = t.sites.reduce((sum, s) => sum + (s.bankrollInitial ?? 0), 0);
+    const totalFinal = t.sites.reduce((sum, s) => sum + (s.bankrollFinal ?? 0), 0);
+    return totalFinal - totalInitial;
+  }
+  return t.winnings - getTournamentCost(t);
+}
+
+/**
+ * Whether a tournament finished in the money.
+ * Uses the explicit cashed flag when present, otherwise falls back to winnings > 0.
+ */
+export function isTournamentITM(t: Tournament): boolean {
+  return t.cashed === true || (t.cashed === undefined && t.winnings > 0);
+}
+
 export function calculateTournamentStats(tournaments: Tournament[]): TournamentStats {
   if (tournaments.length === 0) {
     return {
@@ -108,20 +137,27 @@ export function calculateTournamentStats(tournaments: Tournament[]): TournamentS
       avgFinish: 0,
       bestFinish: 0,
       avgFieldSize: 0,
+      avgCashMultiple: 0,
+      biggestCash: 0,
     };
   }
 
-  const totalBuyIns = tournaments.reduce(
-    (sum, t) => sum + (t.buyIn + t.fee) * (t.entries + 1),
-    0,
-  );
+  const totalBuyIns = tournaments.reduce((sum, t) => sum + getTournamentCost(t), 0);
   const totalWinnings = tournaments.reduce((sum, t) => sum + t.winnings, 0);
   const totalProfit = totalWinnings - totalBuyIns;
 
   // ITM: either explicit cashed flag or winnings > 0
-  const itmTournaments = tournaments.filter(
-    t => t.cashed === true || (t.cashed === undefined && t.winnings > 0),
-  ).length;
+  const itmTournaments = tournaments.filter(isTournamentITM).length;
+
+  // Average cash multiple: winnings / cost across cashed tournaments with a real cost
+  const cashMultiples = tournaments
+    .filter(t => isTournamentITM(t) && getTournamentCost(t) > 0)
+    .map(t => t.winnings / getTournamentCost(t));
+  const avgCashMultiple = cashMultiples.length > 0
+    ? cashMultiples.reduce((a, b) => a + b, 0) / cashMultiples.length
+    : 0;
+
+  const biggestCash = Math.max(...tournaments.map(t => t.winnings));
 
   const finishes = tournaments
     .filter(t => t.finishPosition !== undefined && t.finishPosition !== null)
@@ -148,6 +184,8 @@ export function calculateTournamentStats(tournaments: Tournament[]): TournamentS
     avgFieldSize: fieldSizes.length > 0
       ? fieldSizes.reduce((a, b) => a + b, 0) / fieldSizes.length
       : 0,
+    avgCashMultiple,
+    biggestCash,
   };
 }
 
@@ -256,4 +294,72 @@ export function calculateROITrend(
   }
 
   return result;
+}
+
+export function calculateITMTrend(
+  tournaments: Tournament[],
+  windowSize: number = 10,
+): { date: string; itmPercentage: number }[] {
+  const sorted = [...tournaments].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
+
+  const result: { date: string; itmPercentage: number }[] = [];
+
+  for (let i = windowSize - 1; i < sorted.length; i++) {
+    const window = sorted.slice(i - windowSize + 1, i + 1);
+    const itmCount = window.filter(isTournamentITM).length;
+
+    result.push({
+      date: sorted[i]!.date,
+      itmPercentage: (itmCount / windowSize) * 100,
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Breakdown of tournament performance by buy-in level (per-entry cost `buyIn + fee`).
+ * Session-type tournaments are excluded — they have no single meaningful buy-in.
+ * Buckets are half-open `[min, max)`; the top bucket is open-ended (`max = null`).
+ * Returns only non-empty buckets, ascending by `min`.
+ */
+export function calculateBuyInBreakdown(
+  tournaments: Tournament[],
+  boundaries: number[] = [10, 25, 50, 100, 250, 500],
+): BuyInLevelStats[] {
+  const relevant = tournaments.filter(t => !t.isSession);
+
+  // Build bucket ranges: [0, b0), [b0, b1), ..., [bn, null)
+  const ranges: { min: number; max: number | null }[] = [];
+  let prev = 0;
+  for (const boundary of boundaries) {
+    ranges.push({ min: prev, max: boundary });
+    prev = boundary;
+  }
+  ranges.push({ min: prev, max: null });
+
+  return ranges
+    .map((range) => {
+      const inBucket = relevant.filter((t) => {
+        const level = t.buyIn + t.fee;
+        return level >= range.min && (range.max === null || level < range.max);
+      });
+
+      const totalCost = inBucket.reduce((sum, t) => sum + getTournamentCost(t), 0);
+      const totalProfit = inBucket.reduce((sum, t) => sum + getTournamentNetProfit(t), 0);
+      const itmCount = inBucket.filter(isTournamentITM).length;
+
+      return {
+        min: range.min,
+        max: range.max,
+        count: inBucket.length,
+        totalCost,
+        totalProfit,
+        roi: totalCost > 0 ? (totalProfit / totalCost) * 100 : 0,
+        itmPercentage: inBucket.length > 0 ? (itmCount / inBucket.length) * 100 : 0,
+      };
+    })
+    .filter(bucket => bucket.count > 0);
 }

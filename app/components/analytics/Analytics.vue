@@ -2,24 +2,28 @@
   <div class="p-4 lg:p-0 space-y-6">
     <AnalyticsHeader />
 
-    <AnalyticsTabs v-model="activeTab" />
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <AnalyticsTabs v-model="activeTab" />
+      <AnalyticsDateFilter v-model="datePreset" />
+    </div>
 
     <AnalyticsCashCharts
       v-if="activeTab === 'cash'"
       :cumulative-data="cashCumulativeData"
       :session-profit-data="sessionProfitData"
-      :stats="sessionsStore.stats"
+      :stats="cashStats"
     />
 
     <AnalyticsTournamentCharts
       v-if="activeTab === 'tournaments'"
-      :cumulative-data="tournamentCumulativeData"
-      :stats="tournamentsStore.stats"
+      :tournaments="analyticsTournaments"
+      :stats="tournamentStats"
     />
   </div>
 </template>
 
 <script setup lang="ts">
+import type { CashSession, DateRangePreset, Tournament } from '~/types';
 import {
   BarElement,
   CategoryScale,
@@ -32,7 +36,12 @@ import {
   Title,
   Tooltip,
 } from 'chart.js';
-import { calculateCumulativeProfit } from '~/utils/calculations';
+import { getDateRangeFromPreset, isDateInRange } from '~/composables/useFilters';
+import {
+  calculateCumulativeProfit,
+  calculateSessionStats,
+  calculateTournamentStats,
+} from '~/utils/calculations';
 import { formatDateShort } from '~/utils/formatters';
 
 ChartJS.register(
@@ -50,11 +59,31 @@ ChartJS.register(
 const sessionsStore = useSessionsStore();
 const tournamentsStore = useTournamentsStore();
 
-const activeTab = ref<'cash' | 'tournaments'>('cash');
+const activeTab = ref<'cash' | 'tournaments'>('tournaments');
+const datePreset = ref<Exclude<DateRangePreset, 'custom'>>('lifetime');
+
+const dateRange = computed(() => getDateRangeFromPreset(datePreset.value));
+
+// Analytics is scoped locally: only completed entries, filtered by the local date range.
+// It deliberately ignores the Sessions/Tournaments page filters so the two don't interfere.
+// Store state is exposed as readonly refs; analytics only reads/copies these arrays,
+// so assert back to the mutable element types for downstream helpers and props.
+const completedSessions = computed(() =>
+  (sessionsStore.sessions as CashSession[]).filter(s => s.status !== 'in_progress'));
+const completedTournaments = computed(() =>
+  (tournamentsStore.tournaments as Tournament[]).filter(t => t.status !== 'in_progress'));
+
+const analyticsSessions = computed(() =>
+  completedSessions.value.filter(s => isDateInRange(s.date, dateRange.value)));
+const analyticsTournaments = computed(() =>
+  completedTournaments.value.filter(t => isDateInRange(t.date, dateRange.value)));
+
+const cashStats = computed(() => calculateSessionStats(analyticsSessions.value));
+const tournamentStats = computed(() => calculateTournamentStats(analyticsTournaments.value));
 
 const cashCumulativeData = computed(() => {
   const data = calculateCumulativeProfit(
-    sessionsStore.sortedSessions.slice().reverse(),
+    analyticsSessions.value,
     item => (item as { result: number }).result,
   );
 
@@ -72,7 +101,9 @@ const cashCumulativeData = computed(() => {
 });
 
 const sessionProfitData = computed(() => {
-  const sessions = sessionsStore.sortedSessions.slice(0, 30).reverse();
+  const sessions = [...analyticsSessions.value]
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(-30);
 
   return {
     labels: sessions.map(s => formatDateShort(s.date)),
@@ -82,30 +113,6 @@ const sessionProfitData = computed(() => {
       backgroundColor: sessions.map(s =>
         s.result >= 0 ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
       ),
-    }],
-  };
-});
-
-const tournamentCumulativeData = computed(() => {
-  const sorted = tournamentsStore.sortedTournaments.slice().reverse();
-  let cumulative = 0;
-
-  const data = sorted.map((t) => {
-    const cost = (t.buyIn + t.fee) * (t.entries + 1);
-    const profit = t.winnings - cost;
-    cumulative += profit;
-    return { date: t.date, profit, cumulative };
-  });
-
-  return {
-    labels: data.map(d => formatDateShort(d.date)),
-    datasets: [{
-      label: 'Cumulative Profit',
-      data: data.map(d => d.cumulative),
-      borderColor: 'rgb(139, 92, 246)',
-      backgroundColor: 'rgba(139, 92, 246, 0.1)',
-      fill: true,
-      tension: 0.3,
     }],
   };
 });

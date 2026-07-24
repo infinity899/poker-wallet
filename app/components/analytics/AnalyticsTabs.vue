@@ -1,28 +1,33 @@
 <template>
-  <div class="flex gap-2">
+  <div class="inline-flex gap-1 p-1 rounded-lg bg-surface-secondary border border-border dark:bg-surface-dark-secondary dark:border-border-dark">
     <button
-      class="px-4 py-2 rounded-lg font-medium transition-colors"
-      :class="modelValue === 'cash' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'"
-      @click="emit('update:modelValue', 'cash')"
+      v-for="tab in tabs"
+      :key="tab.value"
+      type="button"
+      class="px-4 py-1.5 rounded-md text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
+      :class="modelValue === tab.value
+        ? 'bg-accent-600 text-white shadow-sm dark:bg-accent-500'
+        : 'text-foreground-secondary hover:text-foreground hover:bg-surface-tertiary dark:text-foreground-dark-secondary dark:hover:text-foreground-dark dark:hover:bg-surface-dark-tertiary'"
+      @click="emit('update:modelValue', tab.value)"
     >
-      Cash Games
-    </button>
-    <button
-      class="px-4 py-2 rounded-lg font-medium transition-colors"
-      :class="modelValue === 'tournaments' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'"
-      @click="emit('update:modelValue', 'tournaments')"
-    >
-      Tournaments
+      {{ tab.label }}
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
+type TabValue = 'cash' | 'tournaments';
+
 defineProps<{
-  modelValue: 'cash' | 'tournaments';
+  modelValue: TabValue;
 }>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: 'cash' | 'tournaments'];
+  'update:modelValue': [value: TabValue];
 }>();
+
+const tabs: { value: TabValue; label: string }[] = [
+  { value: 'tournaments', label: 'Tournaments' },
+  { value: 'cash', label: 'Cash Games' },
+];
 </script>
