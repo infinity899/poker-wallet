@@ -21,6 +21,10 @@
       Drawing it as one masked rect of `currentColor` keeps the mark SOLID, which
       is what survives 20px — an earlier stroke-built version was a thin broken
       ring around a floating dot and read as a camera aperture once scaled down.
+
+      Proportions are shared with public/favicon.svg (bold bands, generous ring
+      gap) so the tab icon and the in-app mark are the same logo. Change one,
+      change both, then re-run scripts/generate-favicons.mjs.
     -->
     <mask
       :id="maskId"
@@ -42,18 +46,18 @@
         fill="white"
       />
       <g fill="black">
-        <rect x="10.5" y="0.4" width="3" height="4.4" rx="1.5" />
-        <rect x="10.5" y="19.2" width="3" height="4.4" rx="1.5" />
-        <rect x="0.4" y="10.5" width="4.4" height="3" rx="1.5" />
-        <rect x="19.2" y="10.5" width="4.4" height="3" rx="1.5" />
+        <rect x="10.15" y="-0.5" width="3.7" height="6" rx="1.85" />
+        <rect x="10.15" y="18.5" width="3.7" height="6" rx="1.85" />
+        <rect x="-0.5" y="10.15" width="6" height="3.7" rx="1.85" />
+        <rect x="18.5" y="10.15" width="6" height="3.7" rx="1.85" />
       </g>
       <circle
         cx="12"
         cy="12"
-        r="6.5"
+        r="6.6"
         fill="none"
         stroke="black"
-        stroke-width="1.8"
+        stroke-width="2.45"
       />
     </mask>
 
