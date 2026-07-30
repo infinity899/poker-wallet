@@ -59,6 +59,12 @@ describe('formatProfitShort', () => {
     expect(formatProfitShort(-250)).toBe('-$250');
   });
 
+  it('keeps cents when the amount is not whole', () => {
+    expect(formatProfitShort(20.2)).toBe('+$20.20');
+    expect(formatProfitShort(-0.5)).toBe('-$0.50');
+    expect(formatProfitShort(12.34)).toBe('+$12.34');
+  });
+
   it('shows no sign for zero', () => {
     expect(formatProfitShort(0)).toBe('$0');
   });

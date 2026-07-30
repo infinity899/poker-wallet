@@ -14,6 +14,14 @@ import type {
 import { EXPENSE_CATEGORY_LABELS } from '~/types';
 
 /**
+ * Round a monetary amount to cents
+ * Avoids float artifacts like 120.2 - 100.1 = 20.099999999999994
+ */
+export function roundToCents(amount: number): number {
+  return Math.round((amount + Number.EPSILON) * 100) / 100;
+}
+
+/**
  * Calculate duration in minutes from start and end times
  * Handles sessions spanning midnight
  */

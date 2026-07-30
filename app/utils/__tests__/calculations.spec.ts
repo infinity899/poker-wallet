@@ -15,6 +15,7 @@ import {
   calculateTripsStats,
   calculateWinningsBySite,
   getTournamentNetProfit,
+  roundToCents,
 } from '../calculations';
 
 function createSession(overrides: Partial<CashSession> = {}): CashSession {
@@ -71,6 +72,24 @@ function createExpense(overrides: Partial<Expense> = {}): Expense {
     ...overrides,
   };
 }
+
+describe('roundToCents', () => {
+  it('clears float artifacts from decimal arithmetic', () => {
+    expect(roundToCents(120.2 - 100.1)).toBe(20.1);
+    expect(roundToCents(0.1 + 0.2)).toBe(0.3);
+  });
+
+  it('leaves clean values untouched', () => {
+    expect(roundToCents(20.2)).toBe(20.2);
+    expect(roundToCents(100)).toBe(100);
+    expect(roundToCents(-45.55)).toBe(-45.55);
+  });
+
+  it('rounds beyond two decimals', () => {
+    expect(roundToCents(1.005)).toBe(1.01);
+    expect(roundToCents(2.344)).toBe(2.34);
+  });
+});
 
 describe('calculateSessionStats', () => {
   it('returns zero stats for empty array', () => {

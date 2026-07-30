@@ -135,7 +135,7 @@
                 <input
                   v-model.number="entry.cashIn"
                   type="number"
-                  step="1"
+                  step="0.01"
                   min="0"
                   placeholder="0"
                   class="input font-mono text-sm"
@@ -147,7 +147,7 @@
                 <input
                   v-model.number="entry.cashOut"
                   type="number"
-                  step="1"
+                  step="0.01"
                   min="0"
                   placeholder="0"
                   class="input font-mono text-sm"
@@ -190,7 +190,7 @@
             <input
               v-model.number="form.result"
               type="number"
-              step="1"
+              step="0.01"
               class="input font-mono"
               :class="{ 'bg-surface-secondary dark:bg-surface-dark-tertiary': hasCalculatedResult }"
             >
@@ -261,7 +261,7 @@
 <script setup lang="ts">
 import type { Currency, GameType, SessionStatus, SessionType, SiteEntry } from '~/types';
 import { ArrowLeftIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline';
-import { calculateDurationFromTimes } from '~/utils/calculations';
+import { calculateDurationFromTimes, roundToCents } from '~/utils/calculations';
 import { getCurrencySymbol } from '~/utils/formatters';
 
 interface FormSiteEntry {
@@ -377,7 +377,7 @@ const hasCalculatedResult = computed(() => {
 
 function calculateResult() {
   if (totalCashIn.value > 0 && totalCashOut.value > 0) {
-    form.result = totalCashOut.value - totalCashIn.value;
+    form.result = roundToCents(totalCashOut.value - totalCashIn.value);
   }
 }
 

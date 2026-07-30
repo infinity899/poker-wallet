@@ -60,7 +60,8 @@ export function formatProfitShort(amount: number, currency: Currency = 'USD'): s
     formatted = `${(absAmount / 1000).toFixed(1)}K`;
   }
   else {
-    formatted = absAmount.toFixed(0);
+    // Keep cents when present, but don't pad whole amounts with ".00"
+    formatted = Number.isInteger(absAmount) ? absAmount.toFixed(0) : absAmount.toFixed(2);
   }
 
   if (amount > 0) {

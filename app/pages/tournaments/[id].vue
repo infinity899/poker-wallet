@@ -88,7 +88,7 @@
             <input
               v-model.number="form.buyIn"
               type="number"
-              step="1"
+              step="0.01"
               min="0"
               placeholder="0"
               class="input font-mono text-sm"
@@ -99,7 +99,7 @@
             <input
               v-model.number="form.fee"
               type="number"
-              step="1"
+              step="0.01"
               min="0"
               placeholder="0"
               class="input font-mono text-sm"
@@ -146,7 +146,7 @@
                 <input
                   v-model.number="entry.bankrollInitial"
                   type="number"
-                  step="1"
+                  step="0.01"
                   min="0"
                   placeholder="0"
                   class="input font-mono text-sm"
@@ -157,7 +157,7 @@
                 <input
                   v-model.number="entry.bankrollFinal"
                   type="number"
-                  step="1"
+                  step="0.01"
                   min="0"
                   placeholder="0"
                   class="input font-mono text-sm"
@@ -211,6 +211,7 @@
             <input
               v-model.number="form.winnings"
               type="number"
+              step="0.01"
               min="0"
               class="input font-mono"
             >
