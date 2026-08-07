@@ -11,6 +11,27 @@ import type { ChartOptions } from 'chart.js';
  * computed also re-runs on a light/dark flip. (These used to be hardcoded slate
  * literals, which meant chart chrome stayed dark-mode-colored in light mode.)
  */
+/**
+ * Colors for a set of chart series.
+ *
+ * A lone series keeps the accent — the app's "this is your number" color. Split
+ * into several, they take the categorical palette instead, which holds one
+ * lightness across hues so no line visually outranks another.
+ */
+export function useSeriesPalette() {
+  const { tokens } = useThemeTokens();
+
+  function colorAt(index: number, total: number): string {
+    if (total <= 1) {
+      return tokens.value.accent;
+    }
+    const palette = tokens.value.series;
+    return palette[index % palette.length] as string;
+  }
+
+  return { colorAt };
+}
+
 export function useCurrencyChartOptions() {
   const { formatAmount, displayCurrency } = useCurrency();
   const { tokens } = useThemeTokens();
@@ -202,11 +223,30 @@ export function useCurrencyChartOptions() {
     };
   });
 
+  /**
+   * Legend for charts split into one series per group. Charts with a single
+   * series keep `legend: { display: false }` — a one-entry legend is noise.
+   */
+  const seriesLegend = computed(() => ({
+    display: true,
+    position: 'bottom' as const,
+    labels: {
+      color: tokens.value.tick,
+      font: { size: 11 },
+      padding: 12,
+      usePointStyle: true,
+      pointStyle: 'circle' as const,
+      boxWidth: 8,
+      boxHeight: 8,
+    },
+  }));
+
   return {
     lineChartOptions,
     barChartOptions,
     percentLineChartOptions,
     sparklineChartOptions,
     pieChartOptions,
+    seriesLegend,
   };
 }

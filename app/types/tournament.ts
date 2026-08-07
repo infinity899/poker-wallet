@@ -43,6 +43,12 @@ export interface Tournament {
   sessionCount?: number; // number of tournaments in the session
 }
 
+/**
+ * Dimension used to split tournament charts into one series per group,
+ * so live/online, sites, buy-in levels etc. get their own dedicated line.
+ */
+export type TournamentBreakdown = 'none' | 'type' | 'venue' | 'buyIn' | 'currency' | 'tag';
+
 export interface TournamentStats {
   totalTournaments: number;
   totalBuyIns: number; // includes fees and re-entries

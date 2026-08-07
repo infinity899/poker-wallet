@@ -13,7 +13,7 @@
         v-else
         class="h-full flex items-center justify-center text-center px-4 text-gray-400 text-sm"
       >
-        Log at least 10 tournaments to see trends
+        Log at least 10 tournaments{{ groups.length > 1 ? ' in a group' : '' }} to see trends
       </div>
     </div>
   </div>
@@ -21,20 +21,46 @@
 
 <script setup lang="ts">
 import type { ChartOptions } from 'chart.js';
-import type { Tournament } from '~/types';
+import type { TournamentGroup } from '~/utils/tournamentGrouping';
 import { Line } from 'vue-chartjs';
 import { calculateITMTrend } from '~/utils/calculations';
 import { formatDateShort } from '~/utils/formatters';
+import { buildTrendSeries } from '~/utils/tournamentGrouping';
 
 const props = defineProps<{
-  tournaments: Tournament[];
+  groups: TournamentGroup[];
 }>();
 
-const { percentLineChartOptions } = useCurrencyChartOptions();
+const { percentLineChartOptions, seriesLegend } = useCurrencyChartOptions();
+const { colorAt } = useSeriesPalette();
+
+const series = computed(() =>
+  buildTrendSeries(props.groups, tournaments =>
+    calculateITMTrend(tournaments, 10).map(point => ({ date: point.date, value: point.itmPercentage }))));
+
+const chartData = computed(() => ({
+  labels: series.value.dates.map(formatDateShort),
+  datasets: series.value.series.map((line, index) => {
+    const color = colorAt(index, series.value.series.length);
+    return {
+      label: line.label,
+      data: line.data,
+      borderColor: color,
+      backgroundColor: withAlpha(color, 0.1),
+      fill: series.value.series.length === 1,
+      tension: 0.3,
+      spanGaps: true,
+    };
+  }),
+}));
 
 // ITM % is bounded, so pin the axis to 0–100 for a stable, comparable scale.
 const options = computed<ChartOptions<'line'>>(() => ({
   ...percentLineChartOptions.value,
+  plugins: {
+    ...percentLineChartOptions.value.plugins,
+    legend: series.value.series.length > 1 ? seriesLegend.value : { display: false },
+  },
   scales: {
     ...percentLineChartOptions.value.scales,
     y: {
@@ -44,20 +70,4 @@ const options = computed<ChartOptions<'line'>>(() => ({
     },
   },
 }));
-
-const chartData = computed(() => {
-  const data = calculateITMTrend(props.tournaments, 10);
-
-  return {
-    labels: data.map(d => formatDateShort(d.date)),
-    datasets: [{
-      label: 'ITM %',
-      data: data.map(d => d.itmPercentage),
-      borderColor: 'rgb(139, 92, 246)',
-      backgroundColor: 'rgba(139, 92, 246, 0.1)',
-      fill: true,
-      tension: 0.3,
-    }],
-  };
-});
 </script>

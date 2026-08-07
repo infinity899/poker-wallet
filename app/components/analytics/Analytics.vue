@@ -14,16 +14,29 @@
       :stats="cashStats"
     />
 
-    <AnalyticsTournamentCharts
-      v-if="activeTab === 'tournaments'"
-      :tournaments="analyticsTournaments"
-      :stats="tournamentStats"
-    />
+    <template v-if="activeTab === 'tournaments'">
+      <TournamentsFilterBar
+        v-model="tournamentFilters"
+        :show-status="false"
+        :result-count="analyticsTournaments.length"
+        :total-count="dateScopedTournaments.length"
+      />
+
+      <div class="flex justify-end">
+        <TournamentsBreakdownSelect v-model="breakdown" />
+      </div>
+
+      <AnalyticsTournamentCharts
+        :tournaments="analyticsTournaments"
+        :stats="tournamentStats"
+        :breakdown="breakdown"
+      />
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { CashSession, DateRangePreset, Tournament } from '~/types';
+import type { CashSession, DateRangePreset, Tournament, TournamentBreakdown, TournamentFilters } from '~/types';
 import {
   ArcElement,
   BarElement,
@@ -38,7 +51,12 @@ import {
   Title,
   Tooltip,
 } from 'chart.js';
-import { getDateRangeFromPreset, isDateInRange } from '~/composables/useFilters';
+import {
+  getDateRangeFromPreset,
+  isDateInRange,
+  matchesTournamentFilters,
+} from '~/composables/useFilters';
+import { DEFAULT_TOURNAMENT_FILTERS } from '~/types';
 import {
   calculateCumulativeProfit,
   calculateSessionStats,
@@ -66,6 +84,11 @@ const tournamentsStore = useTournamentsStore();
 const activeTab = ref<'cash' | 'tournaments'>('tournaments');
 const datePreset = ref<Exclude<DateRangePreset, 'custom'>>('lifetime');
 
+// Tournament filters and the chart split are analytics-local, like the date
+// range above: changing them here never touches the Tournaments page.
+const tournamentFilters = ref<TournamentFilters>({ ...DEFAULT_TOURNAMENT_FILTERS });
+const breakdown = ref<TournamentBreakdown>('none');
+
 const dateRange = computed(() => getDateRangeFromPreset(datePreset.value));
 
 // Analytics is scoped locally: only completed entries, filtered by the local date range.
@@ -79,8 +102,10 @@ const completedTournaments = computed(() =>
 
 const analyticsSessions = computed(() =>
   completedSessions.value.filter(s => isDateInRange(s.date, dateRange.value)));
-const analyticsTournaments = computed(() =>
+const dateScopedTournaments = computed(() =>
   completedTournaments.value.filter(t => isDateInRange(t.date, dateRange.value)));
+const analyticsTournaments = computed(() =>
+  dateScopedTournaments.value.filter(t => matchesTournamentFilters(t, tournamentFilters.value)));
 
 const cashStats = computed(() => calculateSessionStats(analyticsSessions.value));
 const tournamentStats = computed(() => calculateTournamentStats(analyticsTournaments.value));

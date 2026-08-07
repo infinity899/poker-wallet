@@ -7,43 +7,58 @@
       <Line
         v-if="chartData.labels.length > 0"
         :data="chartData"
-        :options="percentLineChartOptions"
+        :options="options"
       />
       <div
         v-else
         class="h-full flex items-center justify-center text-center px-4 text-gray-400 text-sm"
       >
-        Log at least 10 tournaments to see trends
+        Log at least 10 tournaments{{ groups.length > 1 ? ' in a group' : '' }} to see trends
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { Tournament } from '~/types';
+import type { ChartOptions } from 'chart.js';
+import type { TournamentGroup } from '~/utils/tournamentGrouping';
 import { Line } from 'vue-chartjs';
 import { calculateROITrend } from '~/utils/calculations';
 import { formatDateShort } from '~/utils/formatters';
+import { buildTrendSeries } from '~/utils/tournamentGrouping';
 
 const props = defineProps<{
-  tournaments: Tournament[];
+  groups: TournamentGroup[];
 }>();
 
-const { percentLineChartOptions } = useCurrencyChartOptions();
+const { percentLineChartOptions, seriesLegend } = useCurrencyChartOptions();
+const { colorAt } = useSeriesPalette();
 
-const chartData = computed(() => {
-  const data = calculateROITrend(props.tournaments, 10);
+const series = computed(() =>
+  buildTrendSeries(props.groups, tournaments =>
+    calculateROITrend(tournaments, 10).map(point => ({ date: point.date, value: point.roi }))));
 
-  return {
-    labels: data.map(d => formatDateShort(d.date)),
-    datasets: [{
-      label: 'ROI',
-      data: data.map(d => d.roi),
-      borderColor: 'rgb(139, 92, 246)',
-      backgroundColor: 'rgba(139, 92, 246, 0.1)',
-      fill: true,
+const chartData = computed(() => ({
+  labels: series.value.dates.map(formatDateShort),
+  datasets: series.value.series.map((line, index) => {
+    const color = colorAt(index, series.value.series.length);
+    return {
+      label: line.label,
+      data: line.data,
+      borderColor: color,
+      backgroundColor: withAlpha(color, 0.1),
+      fill: series.value.series.length === 1,
       tension: 0.3,
-    }],
-  };
-});
+      spanGaps: true,
+    };
+  }),
+}));
+
+const options = computed<ChartOptions<'line'>>(() => ({
+  ...percentLineChartOptions.value,
+  plugins: {
+    ...percentLineChartOptions.value.plugins,
+    legend: series.value.series.length > 1 ? seriesLegend.value : { display: false },
+  },
+}));
 </script>

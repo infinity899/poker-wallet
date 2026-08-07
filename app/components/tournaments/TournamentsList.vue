@@ -4,9 +4,30 @@
       :count="tournamentsStore.filteredTournaments.length"
       @log-session="openSessionModal"
     />
+    <TournamentsFilterBar
+      v-model="tournamentsStore.filters"
+      show-date
+      :result-count="tournamentsStore.filteredTournaments.length"
+      :total-count="tournamentsStore.tournaments.length"
+    />
+
     <TournamentsStats :stats="tournamentsStore.stats" />
 
-    <TournamentsProfitChart :tournaments="tournamentsStore.sortedTournaments" />
+    <div class="flex justify-end">
+      <TournamentsBreakdownSelect v-model="breakdown" />
+    </div>
+
+    <TournamentsProfitChart
+      :tournaments="tournamentsStore.sortedTournaments"
+      :breakdown="breakdown"
+    />
+
+    <TournamentsBreakdownTable
+      v-if="breakdown !== 'none'"
+      :groups="breakdownGroups"
+      :dimension-label="breakdownLabel(breakdown)"
+      :overlaps="breakdown === 'tag'"
+    />
 
     <TournamentsMobileList
       v-if="isMobile"
@@ -34,15 +55,26 @@
 </template>
 
 <script setup lang="ts">
-import type { Currency, SessionStatus, SessionType } from '~/types';
+import type { Currency, SessionStatus, SessionType, Tournament, TournamentBreakdown } from '~/types';
 import type { TournamentSiteEntry } from '~/types/tournament';
+import { breakdownLabel, groupTournaments } from '~/utils/tournamentGrouping';
 
 const tournamentsStore = useTournamentsStore();
 const communitiesStore = useCommunitiesStore();
 const { isMobile } = useBreakpoint();
+const { formatAmount } = useCurrency();
 
 const deleteConfirmId = ref<string | null>(null);
 const showSessionModal = ref(false);
+const breakdown = ref<TournamentBreakdown>('none');
+
+// The table mirrors the chart: same filtered set, same split, same colors.
+const breakdownGroups = computed(() =>
+  groupTournaments(
+    (tournamentsStore.filteredTournaments as Tournament[]).filter(t => t.status !== 'in_progress'),
+    breakdown.value,
+    { formatAmount },
+  ));
 
 function handleDelete(id: string) {
   deleteConfirmId.value = id;

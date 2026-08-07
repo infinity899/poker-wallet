@@ -4,9 +4,9 @@
       Performance by Buy-in Level
     </h3>
 
-    <template v-if="breakdown.length > 0">
+    <template v-if="bucketLabels.length > 0">
       <div class="h-64 mb-4">
-        <Bar :data="chartData" :options="barChartOptions" />
+        <Bar :data="chartData" :options="options" />
       </div>
 
       <div class="overflow-x-auto">
@@ -32,7 +32,7 @@
           </thead>
           <tbody>
             <tr
-              v-for="bucket in breakdown"
+              v-for="bucket in totals"
               :key="bucket.min"
               class="border-b border-gray-100 dark:border-gray-800 last:border-0"
             >
@@ -73,18 +73,28 @@
 </template>
 
 <script setup lang="ts">
-import type { BuyInLevelStats, Tournament } from '~/types';
+import type { ChartOptions } from 'chart.js';
+import type { BuyInLevelStats, Tournament, TournamentBreakdown } from '~/types';
+import type { TournamentGroup } from '~/utils/tournamentGrouping';
 import { Bar } from 'vue-chartjs';
 import { calculateBuyInBreakdown } from '~/utils/calculations';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
+  /** Full filtered set — drives the summary table and the un-split bars. */
   tournaments: Tournament[];
-}>();
+  /** One bar series per group; a single group falls back to profit coloring. */
+  groups: TournamentGroup[];
+  breakdown?: TournamentBreakdown;
+}>(), {
+  breakdown: 'none',
+});
 
 const { formatAmount, formatDisplayProfit } = useCurrency();
-const { barChartOptions } = useCurrencyChartOptions();
+const { barChartOptions, seriesLegend } = useCurrencyChartOptions();
+const { tokens } = useThemeTokens();
+const { colorAt } = useSeriesPalette();
 
-const breakdown = computed(() => calculateBuyInBreakdown(props.tournaments));
+const totals = computed(() => calculateBuyInBreakdown(props.tournaments));
 
 function bucketLabel(bucket: BuyInLevelStats): string {
   if (bucket.max === null) {
@@ -93,14 +103,61 @@ function bucketLabel(bucket: BuyInLevelStats): string {
   return `${formatAmount(bucket.min)}–${formatAmount(bucket.max)}`;
 }
 
-const chartData = computed(() => ({
-  labels: breakdown.value.map(bucketLabel),
-  datasets: [{
-    label: 'Profit',
-    data: breakdown.value.map(b => b.totalProfit),
-    backgroundColor: breakdown.value.map(b =>
-      b.totalProfit >= 0 ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)',
-    ),
-  }],
+/*
+ * Buckets come from the whole set, not per group, so every series is plotted
+ * against the same levels — a group with no entries at a level simply has no
+ * bar there rather than shifting the axis.
+ */
+const bucketLabels = computed(() => totals.value.map(bucketLabel));
+
+// Splitting buy-in bars *by* buy-in level would just draw the same buckets
+// one per series, so that dimension keeps the plain profit-colored bars.
+const isSplit = computed(() => props.groups.length > 1 && props.breakdown !== 'buyIn');
+
+const chartData = computed(() => {
+  if (!isSplit.value) {
+    return {
+      labels: bucketLabels.value,
+      datasets: [{
+        label: 'Profit',
+        data: totals.value.map(b => b.totalProfit),
+        backgroundColor: totals.value.map(b =>
+          b.totalProfit >= 0 ? tokens.value.success : tokens.value.danger,
+        ),
+      }],
+    };
+  }
+
+  const mins = totals.value.map(b => b.min);
+
+  return {
+    labels: bucketLabels.value,
+    datasets: props.groups.map((group, index) => {
+      const byMin = new Map(
+        calculateBuyInBreakdown(group.tournaments).map(b => [b.min, b.totalProfit]),
+      );
+      return {
+        label: group.label,
+        data: mins.map(min => byMin.get(min) ?? null),
+        backgroundColor: colorAt(index, props.groups.length),
+      };
+    }),
+  };
+});
+
+const options = computed<ChartOptions<'bar'>>(() => ({
+  ...barChartOptions.value,
+  plugins: {
+    ...barChartOptions.value.plugins,
+    legend: isSplit.value ? seriesLegend.value : { display: false },
+    tooltip: {
+      ...barChartOptions.value.plugins?.tooltip,
+      callbacks: {
+        label: context => (isSplit.value
+          ? `${context.dataset.label}: ${formatAmount(context.raw as number)}`
+          : formatAmount(context.raw as number)),
+      },
+    },
+  },
 }));
 </script>

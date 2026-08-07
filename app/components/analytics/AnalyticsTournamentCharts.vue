@@ -91,7 +91,7 @@
       </div>
 
       <div
-        v-if="cumulativeData.labels.length > 0"
+        v-if="totalCumulativeData.labels.length > 0"
         class="mt-6 pt-4 border-t border-border dark:border-border-dark"
       >
         <div class="flex items-baseline justify-between gap-4 mb-2">
@@ -107,7 +107,7 @@
         </div>
         <div class="h-20">
           <Line
-            :data="cumulativeData"
+            :data="totalCumulativeData"
             :options="sparklineChartOptions"
           />
         </div>
@@ -115,18 +115,27 @@
     </div>
 
     <div class="lg:col-span-2">
-      <AnalyticsBuyInBreakdown :tournaments="tournaments" />
+      <AnalyticsBuyInBreakdown
+        :tournaments="tournaments"
+        :groups="groups"
+        :breakdown="breakdown"
+      />
     </div>
 
     <div class="card p-6 lg:col-span-2">
-      <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-4">
-        Cumulative Profit
-      </h3>
+      <div class="flex flex-wrap items-baseline justify-between gap-2 mb-4">
+        <h3 class="font-semibold text-gray-900 dark:text-gray-100">
+          Cumulative Profit
+        </h3>
+        <p v-if="groups.length > 1" class="text-xs text-foreground-muted">
+          {{ groups.length }} series
+        </p>
+      </div>
       <div class="h-64">
         <Line
           v-if="cumulativeData.labels.length > 0"
           :data="cumulativeData"
-          :options="lineChartOptions"
+          :options="cumulativeOptions"
         />
         <div
           v-else
@@ -137,29 +146,57 @@
       </div>
     </div>
 
-    <AnalyticsRoiTrendChart :tournaments="tournaments" />
-    <AnalyticsItmTrendChart :tournaments="tournaments" />
+    <AnalyticsRoiTrendChart :groups="groups" />
+    <AnalyticsItmTrendChart :groups="groups" />
 
-    <AnalyticsTypeComparison :tournaments="tournaments" />
+    <TournamentsBreakdownTable
+      :groups="tableGroups"
+      :dimension-label="tableLabel"
+      :overlaps="breakdown === 'tag'"
+    />
     <AnalyticsWinningsBySite :tournaments="tournaments" />
   </div>
 </template>
 
 <script setup lang="ts">
-import type { Tournament, TournamentStats } from '~/types';
+import type { ChartOptions } from 'chart.js';
+import type { Tournament, TournamentBreakdown, TournamentStats } from '~/types';
 import { Line } from 'vue-chartjs';
 import { calculateCumulativeProfit, getTournamentNetProfit } from '~/utils/calculations';
 import { formatDateShort } from '~/utils/formatters';
+import { breakdownLabel, buildCumulativeSeries, groupTournaments } from '~/utils/tournamentGrouping';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   tournaments: Tournament[];
   stats: TournamentStats;
-}>();
+  /** Splits every chart below into one series per group. */
+  breakdown?: TournamentBreakdown;
+}>(), {
+  breakdown: 'none',
+});
 
 const { formatAmount, formatDisplayProfit } = useCurrency();
-const { lineChartOptions, sparklineChartOptions } = useCurrencyChartOptions();
+const { lineChartOptions, sparklineChartOptions, seriesLegend } = useCurrencyChartOptions();
+const { tokens } = useThemeTokens();
+const { colorAt } = useSeriesPalette();
 
-const cumulativeData = computed(() => {
+const groups = computed(() =>
+  groupTournaments(props.tournaments, props.breakdown, { formatAmount }));
+
+/*
+ * With no breakdown chosen, the comparison table keeps its historical job of
+ * contrasting live and online play — that split is worth seeing by default.
+ */
+const tableGroups = computed(() =>
+  props.breakdown === 'none'
+    ? groupTournaments(props.tournaments, 'type', { formatAmount })
+    : groups.value);
+
+const tableLabel = computed(() =>
+  props.breakdown === 'none' ? 'Live vs Online' : breakdownLabel(props.breakdown));
+
+/** The headline sparkline always tracks the total, next to the total figure. */
+const totalCumulativeData = computed(() => {
   const data = calculateCumulativeProfit(
     props.tournaments,
     item => getTournamentNetProfit(item as Tournament),
@@ -170,13 +207,41 @@ const cumulativeData = computed(() => {
     datasets: [{
       label: 'Cumulative Profit',
       data: data.map(d => d.cumulative),
-      borderColor: 'rgb(139, 92, 246)',
-      backgroundColor: 'rgba(139, 92, 246, 0.1)',
+      borderColor: tokens.value.accent,
+      backgroundColor: withAlpha(tokens.value.accent, 0.1),
       fill: true,
       tension: 0.3,
     }],
   };
 });
+
+const cumulativeData = computed(() => {
+  const { dates, series } = buildCumulativeSeries(groups.value);
+
+  return {
+    labels: dates.map(formatDateShort),
+    datasets: series.map((line, index) => {
+      const color = colorAt(index, series.length);
+      return {
+        label: line.label,
+        data: line.data,
+        borderColor: color,
+        backgroundColor: withAlpha(color, 0.1),
+        fill: series.length === 1,
+        tension: 0.3,
+        spanGaps: true,
+      };
+    }),
+  };
+});
+
+const cumulativeOptions = computed<ChartOptions<'line'>>(() => ({
+  ...lineChartOptions.value,
+  plugins: {
+    ...lineChartOptions.value.plugins,
+    legend: groups.value.length > 1 ? seriesLegend.value : { display: false },
+  },
+}));
 
 function getOrdinal(n: number): string {
   const suffix = n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th';

@@ -1,8 +1,13 @@
 <template>
   <div class="card p-4 lg:p-5">
-    <h3 class="text-sm font-semibold text-foreground dark:text-foreground-dark mb-4">
-      Cumulative Tournament Profit
-    </h3>
+    <div class="flex flex-wrap items-baseline justify-between gap-2 mb-4">
+      <h3 class="text-sm font-semibold text-foreground dark:text-foreground-dark">
+        Cumulative Tournament Profit
+      </h3>
+      <p v-if="groups.length > 1" class="text-xs text-foreground-muted">
+        {{ groups.length }} series
+      </p>
+    </div>
     <div class="h-72 lg:h-80">
       <Line
         v-if="chartData.labels && chartData.labels.length > 0"
@@ -21,24 +26,33 @@
 
 <script setup lang="ts">
 import type { ChartData, ChartOptions } from 'chart.js';
-import type { Tournament } from '~/types';
+import type { Tournament, TournamentBreakdown } from '~/types';
 import {
   CategoryScale,
   Chart as ChartJS,
   Filler,
+  Legend,
   LinearScale,
   LineElement,
   PointElement,
   Tooltip,
 } from 'chart.js';
 import { Line } from 'vue-chartjs';
-import { formatCurrency, formatDateShort } from '~/utils/formatters';
+import { formatDateShort } from '~/utils/formatters';
+import { buildCumulativeSeries, groupTournaments } from '~/utils/tournamentGrouping';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   tournaments: Tournament[];
-}>();
+  /** Splits the chart into one line per group (live/online, site, …). */
+  breakdown?: TournamentBreakdown;
+}>(), {
+  breakdown: 'none',
+});
 
 const { tokens } = useThemeTokens();
+const { colorAt } = useSeriesPalette();
+// Values are stored in USD; formatAmount renders them in the display currency.
+const { formatAmount } = useCurrency();
 
 ChartJS.register(
   CategoryScale,
@@ -46,32 +60,35 @@ ChartJS.register(
   PointElement,
   LineElement,
   Tooltip,
+  Legend,
   Filler,
 );
 
-const chartData = computed<ChartData<'line'>>(() => {
-  const completed = props.tournaments
-    .filter(t => t.status !== 'in_progress')
-    .slice()
-    .reverse();
+const groups = computed(() =>
+  groupTournaments(
+    props.tournaments.filter(t => t.status !== 'in_progress'),
+    props.breakdown,
+    { formatAmount },
+  ));
 
-  let cumulative = 0;
-  const data = completed.map((t) => {
-    const cost = (t.buyIn + t.fee) * (t.entries + 1);
-    cumulative += t.winnings - cost;
-    return { date: t.date, cumulative };
-  });
+const chartData = computed<ChartData<'line'>>(() => {
+  const { dates, series } = buildCumulativeSeries(groups.value);
 
   return {
-    labels: data.map(d => formatDateShort(d.date)),
-    datasets: [{
-      label: 'Cumulative Profit',
-      data: data.map(d => d.cumulative),
-      borderColor: tokens.value.accent,
-      backgroundColor: withAlpha(tokens.value.accent, 0.1),
-      fill: true,
-      tension: 0.3,
-    }],
+    labels: dates.map(formatDateShort),
+    datasets: series.map((line, index) => {
+      const color = colorAt(index, series.length);
+      return {
+        label: line.label,
+        data: line.data,
+        borderColor: color,
+        backgroundColor: withAlpha(color, 0.1),
+        // Stacked fills would read as an area chart, which these lines are not.
+        fill: series.length === 1,
+        tension: 0.3,
+        spanGaps: true,
+      };
+    }),
   };
 });
 
@@ -84,9 +101,21 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
     intersect: false,
   },
   plugins: {
-    legend: {
-      display: false,
-    },
+    legend: groups.value.length > 1
+      ? {
+          display: true,
+          position: 'bottom',
+          labels: {
+            color: tokens.value.tick,
+            font: { size: 11 },
+            padding: 12,
+            usePointStyle: true,
+            pointStyle: 'circle',
+            boxWidth: 8,
+            boxHeight: 8,
+          },
+        }
+      : { display: false },
     tooltip: {
       ...tokens.value.tooltip,
       borderWidth: 1,
@@ -105,7 +134,7 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
           if (value === null || value === undefined) {
             return '';
           }
-          return `${context.dataset.label}: ${formatCurrency(value)}`;
+          return `${context.dataset.label}: ${formatAmount(value)}`;
         },
       },
     },
@@ -113,7 +142,7 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
   scales: {
     y: {
       ticks: {
-        callback: value => formatCurrency(value as number),
+        callback: value => formatAmount(value as number),
         color: tokens.value.tick,
         font: { size: 10 },
       },

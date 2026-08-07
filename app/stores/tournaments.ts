@@ -1,12 +1,13 @@
 import type { LocalStorageAdapter } from '~/adapters/LocalStorageAdapter';
 import type { StorageAdapter } from '~/adapters/types';
-import type { NewTournament, Result, Tournament, TournamentFilters, TournamentStats } from '~/types';
+import type { Currency, NewTournament, Result, SessionType, Tournament, TournamentFilters, TournamentStats } from '~/types';
 import { defineStore } from 'pinia';
 import { createTournamentAdapter } from '~/adapters/tournamentAdapter';
-import { isDateInRange } from '~/composables/useFilters';
+import { matchesTournamentFilters } from '~/composables/useFilters';
 import { useTypedSupabaseClient } from '~/composables/useTypedSupabase';
 import { DEFAULT_TOURNAMENT_FILTERS } from '~/types';
 import { calculateTournamentStats, getTournamentNetProfit } from '~/utils/calculations';
+import { getTournamentVenueNames } from '~/utils/tournamentGrouping';
 
 export const useTournamentsStore = defineStore('tournaments', () => {
   const supabase = useTypedSupabaseClient();
@@ -35,83 +36,8 @@ export const useTournamentsStore = defineStore('tournaments', () => {
   }
 
   // Getters
-  const filteredTournaments = computed(() => {
-    return tournaments.value.filter((tournament) => {
-      const f = filters.value;
-
-      // Date range filter
-      if (!isDateInRange(tournament.date, f.dateRange)) {
-        return false;
-      }
-
-      // Type filter
-      if (f.type !== 'all' && tournament.type !== f.type) {
-        return false;
-      }
-
-      // Currency filter
-      if (f.currency !== 'all' && tournament.currency !== f.currency) {
-        return false;
-      }
-
-      // Buy-in range filter
-      if (f.buyInMin !== undefined && tournament.buyIn < f.buyInMin) {
-        return false;
-      }
-      if (f.buyInMax !== undefined && tournament.buyIn > f.buyInMax) {
-        return false;
-      }
-
-      // Venues filter
-      if (f.venues.length > 0) {
-        const venueMatch = tournament.venue
-          ? f.venues.includes(tournament.venue)
-          : tournament.site
-            ? f.venues.includes(tournament.site)
-            : false;
-        if (!venueMatch) {
-          return false;
-        }
-      }
-
-      // Tags filter
-      if (f.tags.length > 0) {
-        const hasTag = f.tags.some(tag => tournament.tags.includes(tag));
-        if (!hasTag) {
-          return false;
-        }
-      }
-
-      // ITM only filter
-      if (f.itmOnly) {
-        const isItm = tournament.cashed === true
-          || (tournament.cashed === undefined && tournament.winnings > 0);
-        if (!isItm) {
-          return false;
-        }
-      }
-
-      // Search query
-      if (f.searchQuery && f.searchQuery.length > 0) {
-        const query = f.searchQuery.toLowerCase();
-        const searchableText = [
-          tournament.name,
-          tournament.venue,
-          tournament.site,
-          tournament.notes,
-          ...tournament.tags,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-        if (!searchableText.includes(query)) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  });
+  const filteredTournaments = computed(() =>
+    tournaments.value.filter(tournament => matchesTournamentFilters(tournament, filters.value)));
 
   const sortedTournaments = computed(() => {
     return [...filteredTournaments.value].sort(
@@ -129,17 +55,41 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     return Array.from(buyIns).sort((a, b) => a - b);
   });
 
-  const allVenues = computed(() => {
-    const venues = new Set<string>();
+  /**
+   * Venues and sites that actually appear in the data, with the play type they
+   * were used for, so the filter UI can group live venues apart from online
+   * sites. Sorted by usage so the places played most often come first.
+   */
+  const venueOptions = computed<{ name: string; type: SessionType; count: number }[]>(() => {
+    const seen = new Map<string, { name: string; type: SessionType; count: number }>();
+
     tournaments.value.forEach((t) => {
-      if (t.venue) {
-        venues.add(t.venue);
-      }
-      if (t.site) {
-        venues.add(t.site);
+      for (const name of getTournamentVenueNames(t)) {
+        const entry = seen.get(name);
+        if (entry) {
+          entry.count++;
+        }
+        else {
+          seen.set(name, { name, type: t.type, count: 1 });
+        }
       }
     });
-    return Array.from(venues).sort();
+
+    return Array.from(seen.values()).sort(
+      (a, b) => b.count - a.count || a.name.localeCompare(b.name),
+    );
+  });
+
+  const tagOptions = computed<string[]>(() => {
+    const tags = new Set<string>();
+    tournaments.value.forEach(t => t.tags.forEach(tag => tags.add(tag)));
+    return Array.from(tags).sort();
+  });
+
+  const currencyOptions = computed<Currency[]>(() => {
+    const currencies = new Set<Currency>();
+    tournaments.value.forEach(t => currencies.add(t.originalCurrency ?? t.currency));
+    return Array.from(currencies).sort();
   });
 
   const inProgressTournaments = computed(() => {
@@ -351,7 +301,9 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     inProgressTournaments,
     stats,
     allBuyIns,
-    allVenues,
+    venueOptions,
+    tagOptions,
+    currencyOptions,
 
     // Actions
     initialize,

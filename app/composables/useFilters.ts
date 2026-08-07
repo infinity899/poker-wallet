@@ -2,12 +2,15 @@ import type {
   DateRange,
   DateRangePreset,
   SessionFilters,
+  Tournament,
   TournamentFilters,
 } from '~/types';
 import {
   DEFAULT_SESSION_FILTERS,
   DEFAULT_TOURNAMENT_FILTERS,
 } from '~/types';
+import { isTournamentITM } from '~/utils/calculations';
+import { getTournamentBuyInLevel, getTournamentVenueNames } from '~/utils/tournamentGrouping';
 
 export function getDateRangeFromPreset(preset: DateRangePreset): DateRange {
   const now = new Date();
@@ -109,6 +112,111 @@ export function useSessionFilters() {
   };
 }
 
+/**
+ * Single source of truth for "does this tournament pass the filters?".
+ *
+ * Shared by the tournaments store and the analytics page, which filter the same
+ * data through separate filter objects — the store's page-wide one and the
+ * analytics-local one — and must agree on what every filter means.
+ */
+export function matchesTournamentFilters(t: Tournament, f: TournamentFilters): boolean {
+  if (!isDateInRange(t.date, f.dateRange)) {
+    return false;
+  }
+
+  if (f.type !== 'all' && t.type !== f.type) {
+    return false;
+  }
+
+  if (f.status !== 'all' && t.status !== f.status) {
+    return false;
+  }
+
+  // Match the currency the entry was recorded in, not the legacy display field.
+  if (f.currency !== 'all' && (t.originalCurrency ?? t.currency) !== f.currency) {
+    return false;
+  }
+
+  // Buy-in bounds are per-entry cost in USD, matching the buy-in level buckets.
+  const buyInLevel = getTournamentBuyInLevel(t);
+  if (f.buyInMin !== undefined && buyInLevel < f.buyInMin) {
+    return false;
+  }
+  if (f.buyInMax !== undefined && buyInLevel > f.buyInMax) {
+    return false;
+  }
+
+  // A multi-site session matches on any of the sites it touched.
+  if (f.venues.length > 0 && !getTournamentVenueNames(t).some(name => f.venues.includes(name))) {
+    return false;
+  }
+
+  if (f.tags.length > 0 && !f.tags.some(tag => t.tags.includes(tag))) {
+    return false;
+  }
+
+  if (f.itm !== 'all') {
+    const cashed = isTournamentITM(t);
+    if (f.itm === 'itm' && !cashed) {
+      return false;
+    }
+    if (f.itm === 'busted' && cashed) {
+      return false;
+    }
+  }
+
+  if (f.searchQuery && f.searchQuery.length > 0) {
+    const query = f.searchQuery.toLowerCase();
+    const searchableText = [t.name, t.notes, ...getTournamentVenueNames(t), ...t.tags]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    if (!searchableText.includes(query)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * How many filter groups are narrowing the tournament set — drives the badge on
+ * the filter bar. Min/max buy-in count as one group, as they read as one control.
+ */
+export function countActiveTournamentFilters(f: TournamentFilters): number {
+  let count = 0;
+
+  if (f.datePreset !== 'lifetime') {
+    count++;
+  }
+  if (f.type !== 'all') {
+    count++;
+  }
+  if (f.currency !== 'all') {
+    count++;
+  }
+  if (f.buyInMin !== undefined || f.buyInMax !== undefined) {
+    count++;
+  }
+  if (f.venues.length > 0) {
+    count++;
+  }
+  if (f.tags.length > 0) {
+    count++;
+  }
+  if (f.itm !== 'all') {
+    count++;
+  }
+  if (f.status !== 'all') {
+    count++;
+  }
+  if (f.searchQuery && f.searchQuery.length > 0) {
+    count++;
+  }
+
+  return count;
+}
+
 export function useTournamentFilters() {
   const filters = ref<TournamentFilters>({ ...DEFAULT_TOURNAMENT_FILTERS });
 
@@ -126,20 +234,7 @@ export function useTournamentFilters() {
     filters.value = { ...DEFAULT_TOURNAMENT_FILTERS };
   };
 
-  const hasActiveFilters = computed(() => {
-    const f = filters.value;
-    return (
-      f.datePreset !== 'lifetime'
-      || f.type !== 'all'
-      || f.currency !== 'all'
-      || f.buyInMin !== undefined
-      || f.buyInMax !== undefined
-      || f.venues.length > 0
-      || f.tags.length > 0
-      || f.itmOnly
-      || (f.searchQuery && f.searchQuery.length > 0)
-    );
-  });
+  const hasActiveFilters = computed(() => countActiveTournamentFilters(filters.value) > 0);
 
   return {
     filters,

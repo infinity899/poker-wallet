@@ -22,16 +22,24 @@ export interface SessionFilters {
   searchQuery?: string;
 }
 
+/** In-the-money outcome filter. */
+export type TournamentItmFilter = 'all' | 'itm' | 'busted';
+
+/** Completion state filter. */
+export type TournamentStatusFilter = 'all' | 'completed' | 'in_progress';
+
 export interface TournamentFilters {
   dateRange: DateRange;
   datePreset: DateRangePreset;
   type: SessionType | 'all';
   currency: Currency | 'all';
+  /** Per-entry cost (buy-in + fee), in USD. */
   buyInMin?: number;
   buyInMax?: number;
-  venues: string[];
-  tags: string[];
-  itmOnly: boolean;
+  venues: string[]; // live venue and online site names, empty = all
+  tags: string[]; // tag names, empty = all
+  itm: TournamentItmFilter;
+  status: TournamentStatusFilter;
   searchQuery?: string;
 }
 
@@ -53,7 +61,8 @@ export const DEFAULT_TOURNAMENT_FILTERS: TournamentFilters = {
   currency: 'all',
   venues: [],
   tags: [],
-  itmOnly: false,
+  itm: 'all',
+  status: 'all',
 };
 
 export interface ExpenseFilters {
