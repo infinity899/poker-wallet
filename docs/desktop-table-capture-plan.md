@@ -27,13 +27,13 @@ Online tournaments are entered by hand today. The goal: a desktop companion app 
 - **Cheap model by default** (user requirement): `claude-sonnet-5` at effort `low`, switchable in Settings. See *Model selection* below.
 - **Sites: PokerStars and GGPoker** (confirmed). Other sites still work through the vision path; these two drive the picker sort order and the fixture set.
 - **Re-entry rule (confirmed):** capturing the **same table again** means the user re-entered. A second capture with an existing `external_id` does not error — it increments `entries` on the existing row after a one-click confirm. See *Re-entry handling* in step 1.4.
-- **The user signs in with Google.** The desktop app uses email + password, so Phase 0 adds a *Set password* section to the web app's Settings (step 0.5). Same Supabase user, same `user_id`; RLS unchanged.
+- **The user signs in with Google, and the desktop app does too — no password is ever created.** The desktop app uses the OAuth 2.0 native-app flow (RFC 8252): PKCE + a loopback redirect to `http://127.0.0.1:8788/callback`, opened in the **system browser**. Rejected alternative: adding a password to an OAuth-only account, which creates a phishable credential that does not exist today and lowers the account's security for the sake of ~50 lines of code. See *Auth* in step 1.4.
 - **Desktop repo is scaffolded locally first** at `~/Projects/poker-wallet-desktop`; the GitHub remote is added later.
 - API costs are the user's own (≈ $0.005 per capture on Sonnet 5, ≈ $0.003 on Haiku 4.5, ≈ $0.012 on Opus 5).
 
 ### Locked technical decisions
 - **Desktop stack: Electron + electron-vite + Vue 3 + TypeScript.** Same UI stack as the web app. Screenshots come from Electron's built-in `desktopCapturer` — **no native modules**. Tauri was rejected because per-window capture needs Rust crates and a second toolchain for no gain in a personal tool.
-- **Delivery: direct Supabase insert** from the desktop app using the same Supabase project, `@supabase/supabase-js`, and `signInWithPassword` (the web app already supports email/password at `app/pages/auth/login.vue:123`). RLS (`auth.uid() = user_id`) already protects the table. No web-app API is needed.
+- **Delivery: direct Supabase insert** from the desktop app using the same Supabase project, `@supabase/supabase-js`, and Google OAuth (the same `signInWithOAuth` call the web app makes at `app/pages/auth/login.vue:144`, only `redirectTo` differs). RLS (`auth.uid() = user_id`) already protects the table. No web-app API is needed, and **Phase 0 requires no auth work at all**.
 - **All Claude and Supabase calls run in the Electron main process.** The renderer never sees the Anthropic key or the Supabase session. The renderer talks to main through a `contextBridge` API only.
 - **Model selection is a Settings dropdown, default `claude-sonnet-5`.** Extraction is a read-what-you-see task, not reasoning, so the cheap tier is the right default; the user can step up if a site's UI proves hard to read. All models go through `client.messages.parse` with `zodOutputFormat`. Never pass `thinking` (Sonnet 5 / Opus 5 run adaptive thinking when it is omitted; Haiku 4.5 runs without). Refusal fallbacks are deliberately **not** enabled (a poker-table screenshot has no refusal surface); handle `stop_reason === 'refusal'` and `parsed_output === null` as ordinary "extraction failed" errors.
 
@@ -182,16 +182,9 @@ Also append the two columns to the `tournaments` table in `supabase/schema.sql` 
 ### Step 0.4 — Provenance badge
 In `app/pages/tournaments/[id].vue`, next to the status pill in the header, render a small neutral pill `Added from desktop` when `tournament.source === 'desktop'`. Use the existing pill classes in that file (grep `rounded-full` there). Also show the same pill in `app/components/tournaments/TournamentsList.vue`'s in-progress section (line ~74 filters in-progress out of the main list; find where in-progress rows are rendered and add the pill there). No other UI changes.
 
-### Step 0.5 — *Set password* section in Settings (needed because the user signs in with Google)
-- New component `app/components/settings/SettingsPassword.vue`, mounted in `app/components/settings/Settings.vue` between `<SettingsDataMode />` and `<SettingsCurrency />`. Copy the card/heading markup of `SettingsTheme.vue` (`.card p-5`, `h2.text-sm.font-semibold`).
-- Render only when `!authStore.isDemoMode`. Heading: *Desktop app password*. One sentence of copy: "The desktop companion signs in with your email and a password. Set one here — Google sign-in keeps working."
-- Two inputs (`class="input"`): *New password*, *Confirm password*; hand-written `validate()` (min 8 chars, must match), errors under the inputs like `tournaments/new.vue`.
-- Submit: `const { error } = await useSupabaseClient().auth.updateUser({ password: form.password })` → `toast.success('Password set')` / `toast.error(error.message)`. Clear the fields on success.
-- Show the account email read-only above the inputs (`useSupabaseUser().value?.email`) so the user knows which email to type into the desktop app.
-
-### Step 0.6 — Verify
+### Step 0.5 — Verify
 - `npx vue-tsc -p .nuxt/tsconfig.app.json --noEmit`, `npm run lint`, `npm run test:run` all clean.
-- Set a password in Settings while signed in with Google → sign out → sign in at `/auth/login` with email + that password → same data visible (same `user_id`).
+- (No auth change in Phase 0 — the desktop app signs in with Google. See step 1.4 *Auth*.)
 - Apply the migration in Supabase; insert a row by hand via the SQL editor with `external_id = 'pokerstars:1'`, `source = 'desktop'`, `status = 'in_progress'`; confirm it appears under in-progress in the web app with the badge and that *Complete Session* still works on it.
 - Insert the same `external_id` again for the same user → must fail with a unique violation (`23505`).
 
@@ -202,7 +195,10 @@ In `app/pages/tournaments/[id].vue`, next to the status pill in the header, rend
 ### Step 1.1 — Scaffold
 ```bash
 cd ~/Projects
-npm create electron-vite@latest poker-wallet-desktop -- --template vue-ts
+# NOTE: `npm create electron-vite` resolves to `create-electron-vite`, a DIFFERENT tool that
+# emits a vite-plugin-electron layout (electron/main.ts + src/). Use the real electron-vite
+# scaffolder, which produces the src/main + src/preload + src/renderer layout below:
+npm create @quick-start/electron@latest poker-wallet-desktop -- --template vue-ts --skip
 cd poker-wallet-desktop
 git init && git add -A && git commit -m "scaffold electron-vite vue-ts"   # remote added later
 npm i @anthropic-ai/sdk @supabase/supabase-js zod electron-store
@@ -251,7 +247,9 @@ export function getSetting<K extends keyof Settings>(key: K): Settings[K];
 export function setSetting<K extends keyof Settings>(key: K, value: Settings[K]): void;
 
 // Secrets (stored as base64 of safeStorage.encryptString(); decrypted on read)
-type SecretKey = 'anthropicKey' | 'exchangeKey' | 'supabaseSession';
+// The `sb-${string}` arm exists because supabase-js writes its own keys through the storage
+// adapter in step 1.4 — the session AND the PKCE code verifier. Do not narrow it to a fixed union.
+type SecretKey = 'anthropicKey' | 'exchangeKey' | `sb-${string}`;
 export function getSecret(key: SecretKey): string | null;
 export function setSecret(key: SecretKey, value: string | null): void;   // null deletes
 ```
@@ -382,8 +380,54 @@ export async function extractFromImage(png: Buffer, windowTitle: string): Promis
 - Changing the model invalidates the prompt cache (caches are model-scoped) — irrelevant at this volume, noted so nobody "fixes" it.
 
 ### Step 1.4 — `wallet.ts` (Supabase)
-- `createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: true } })`; persist `session` (access + refresh token JSON) in `settings.ts` encrypted; on startup call `supabase.auth.setSession(saved)` and re-save the refreshed session from `onAuthStateChange`.
-- `signIn(email, password)` → `signInWithPassword`. OAuth (Google/GitHub) is out of scope for v1 — a user who only has OAuth must set a password once in the web app's settings (Supabase supports `updateUser({ password })`).
+**Auth — Google OAuth via loopback (RFC 8252). No password anywhere.**
+
+```ts
+const REDIRECT_PORT = 8788;
+const REDIRECT_URL = `http://127.0.0.1:${REDIRECT_PORT}/callback`;
+
+// PKCE stores a code verifier between signInWithOAuth() and exchangeCodeForSession().
+// A memory-only client loses it, so give supabase-js a real storage adapter backed by
+// settings.ts — that is also what persists the session across restarts.
+const storage = {
+  getItem: (k: string) => getSecret(k as SecretKey),
+  setItem: (k: string, v: string) => setSecret(k as SecretKey, v),
+  removeItem: (k: string) => setSecret(k as SecretKey, null),
+};
+
+const supabase = createClient(getSetting('supabaseUrl'), getSetting('supabaseAnonKey'), {
+  auth: {
+    flowType: 'pkce',
+    storage,
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,   // there is no URL bar in Electron
+  },
+});
+
+export async function signInWithGoogle(): Promise<Result<{ email: string }>> {
+  const server = await startLoopbackServer();          // listen BEFORE opening the browser
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: REDIRECT_URL, skipBrowserRedirect: true },
+    });
+    if (error || !data?.url) { return ipcErr(error?.message ?? 'Could not start Google sign-in'); }
+    await shell.openExternal(data.url);                 // system browser, never a BrowserWindow
+    const code = await server.waitForCode();            // rejects after 5 min
+    const { data: s, error: xErr } = await supabase.auth.exchangeCodeForSession(code);
+    if (xErr || !s.session) { return ipcErr(xErr?.message ?? 'Sign-in failed'); }
+    return { success: true, data: { email: s.session.user.email ?? '' } };
+  } finally {
+    server.close();
+  }
+}
+```
+- **`startLoopbackServer()`**: `http.createServer` bound to **`127.0.0.1` only** (never `0.0.0.0`), port 8788. Reads `?code=` from the request URL, responds with a tiny HTML page saying *"Signed in — you can close this tab."*, resolves, then closes. On `EADDRINUSE` return a clear error naming the port; do **not** silently pick another port — the redirect URL is allowlisted server-side and a different port will be rejected.
+- **Never** load Google's login page in a `BrowserWindow`. Google blocks embedded user agents with `disallowed_useragent`; it must be the system browser.
+- **No Google Cloud Console change is needed.** Google's authorized redirect URI is Supabase's own `/auth/v1/callback`, already configured for the web app. Our loopback address is the *second* hop, governed only by the Supabase redirect allowlist (see the user-action note below).
+- **Startup**: the storage adapter rehydrates the session automatically; call `supabase.auth.getUser()` once to confirm it is still valid and let `autoRefreshToken` handle the rest. `signOut()` → `supabase.auth.signOut()` then clear every `sb-` secret.
+- **User action, once, before this step can be tested:** in the Supabase dashboard → **Authentication → URL Configuration → Redirect URLs**, add `http://127.0.0.1:8788/callback`.
 - `findByExternalId(externalId): Promise<Result<ExistingRow | null>>` — `select('id, name, entries, status, date, created_at').eq('user_id', uid).eq('external_id', externalId).maybeSingle()`.
 - `insertTournament(payload: NewTournamentPayload): Promise<Result<{ id: string }>>` — `from('tournaments').insert(payload).select('id').single()`. Map Postgres error code `23505` to `{ code: 'DUPLICATE' }` so the caller can fall into the re-entry path even if the pre-check raced.
 - `addReentry(id): Promise<Result<{ entries: number }>>` — `update({ entries: existing.entries + 1 }).eq('id', id).eq('user_id', uid).select('entries').single()`. **Only `entries` changes** — buy-in/fee/rate stay as recorded at first registration; the web app already multiplies cost by `(entries + 1)` (`calculateTournamentResult`, `app/types/tournament.ts`).
@@ -408,7 +452,7 @@ contextBridge.exposeInMainWorld('api', {
   captureAndExtract:  (sourceId: string) => ipcRenderer.invoke('capture:extract', sourceId), // → Result<{ extraction, previewDataUrl }>
   addTournament:      (form: ReviewFormValues) => ipcRenderer.invoke('wallet:add', form),      // → Result<{ id }>
   listInProgress:     () => ipcRenderer.invoke('wallet:inProgress'),
-  auth:               { status: () => …, signIn: (email, password) => …, signOut: () => … },
+  auth:               { status: () => …, signInWithGoogle: () => …, signOut: () => … },
   settings:           { get: () => …, set: (patch) => …, screenPermission: () => …, openScreenPermission: () => … },
 });
 ```
@@ -419,7 +463,7 @@ contextBridge.exposeInMainWorld('api', {
 - `ReviewForm.vue`: fields prefilled from the extraction; `confidence` shown as a colored chip; `notes` shown as a hint under the form; `isTournamentTable === false` renders a warning banner but still allows adding. `fee === null` leaves the field empty with placeholder "not visible — check lobby". *Add* → `addTournament` → `created`: success toast + jump to In-progress tab; `exists`: the re-entry dialog from step 1.4 (Re-entry / Ignore).
 - `InProgressList.vue` rows show `entries` as a badge (*"2 entries"*) when `> 0` so a re-entry is visibly recorded.
 - `InProgressList.vue`: read-only list for v1.
-- `SettingsForm.vue`: Supabase URL + anon key (defaults hard-coded to the production project so the user only pastes them once if they change), email/password login, Anthropic key, **model dropdown** (labels from `EXTRACTION_MODELS`, default Sonnet 5), exchange-rate key, **captures folder** with *Open folder*, screen-permission status (macOS only).
+- `SettingsForm.vue`: Supabase URL + anon key (defaults hard-coded to the production project so the user only pastes them once if they change), a **Sign in with Google** button (shows the signed-in email + *Sign out* once authenticated), Anthropic key, **model dropdown** (labels from `EXTRACTION_MODELS`, default Sonnet 5), exchange-rate key, **captures folder** with *Open folder*, screen-permission status (macOS only).
 - Global shortcut `CommandOrControl+Shift+P` shows/focuses the app on the Capture tab. Tray icon with *Capture…* / *Quit*. Closing the window hides it instead of quitting.
 
 ### Step 1.8 — Fixture harness (do this before polishing the UI)
@@ -440,7 +484,7 @@ contextBridge.exposeInMainWorld('api', {
 6. Add → row appears in the web app under in-progress with the *Added from desktop* badge, `source = 'desktop'`, `external_id` populated, USD amounts equal to what the web app would store for the same original amount (compare with a manual entry in the web app at the same rate).
 7. Click the same table again within 30 s → "Already added" (no dialog). Wait a minute, click it again → re-entry dialog → **Re-entry** → the web app shows the same row with `entries = 1` and cost doubled; **Ignore** → nothing changes.
 8. Click a cash-game table → banner "This doesn't look like a tournament table".
-9. Kill the app, relaunch → still signed in (session restored from encrypted store) — on both platforms (`safeStorage` uses Keychain on mac, DPAPI on Windows).
+9. Settings → *Sign in with Google* → the **system browser** opens, the already-signed-in Google account is one click → browser shows "you can close this tab" → the app shows your email. Kill the app, relaunch → still signed in (session restored from encrypted store) — on both platforms (`safeStorage` uses Keychain on mac, DPAPI on Windows).
 10. Switch the model to Haiku 4.5 in Settings → capture succeeds (no 400 from a stray `effort`); switch to Opus 5 → succeeds.
 
 ---
@@ -460,4 +504,4 @@ contextBridge.exposeInMainWorld('api', {
 - Hand-history / tournament-summary file parsing, window-title regex extraction, lobby-based re-entry detection (re-entries are recorded by re-capturing the table — see step 1.4), multi-user sharing, code-signing / notarization / auto-update on either platform (unsigned `electron-builder` installers for now — Windows SmartScreen and macOS Gatekeeper will warn on first launch).
 
 ## Open questions
-None. All product questions were answered on 2026-08-28 (sites, Google sign-in → set-password, local scaffold, re-entry = re-capture).
+None. All product questions were answered on 2026-08-28 (sites, Google OAuth on desktop, local scaffold, re-entry = re-capture).
