@@ -63,6 +63,9 @@ export interface DbTournament {
   original_fee: number | null;
   original_winnings: number | null;
   exchange_rate: number | null;
+  // Desktop capture provenance
+  external_id: string | null;
+  source: 'manual' | 'desktop';
   created_at: string;
   updated_at: string;
 }

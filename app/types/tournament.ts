@@ -1,5 +1,8 @@
 import type { Currency, SessionStatus, SessionType } from './session';
 
+/** Where the row came from. Desktop rows are written by the companion capture app. */
+export type TournamentSource = 'manual' | 'desktop';
+
 export interface TournamentSiteEntry {
   name: string; // site or venue name
   buyIn?: number;
@@ -36,6 +39,9 @@ export interface Tournament {
   originalFee?: number; // fee in original currency
   originalWinnings?: number; // winnings in original currency
   exchangeRate?: number; // USD rate at time of recording (1 originalCurrency = X USD)
+  // Desktop capture provenance (optional - demo data and older rows lack them)
+  externalId?: string; // "<siteSlug>:<siteTournamentId>" or "<siteSlug>:<date>:<hash>"
+  source?: TournamentSource;
   createdAt: string;
   updatedAt: string;
   // Session fields (for batch logging multiple tournaments)
