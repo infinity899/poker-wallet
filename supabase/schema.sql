@@ -62,6 +62,8 @@ CREATE TABLE IF NOT EXISTS tournaments (
   notes TEXT,
   tags TEXT[] DEFAULT '{}',
   status TEXT DEFAULT 'completed' CHECK (status IN ('in_progress', 'completed')),
+  external_id TEXT, -- desktop capture identity: "<siteSlug>:<siteTournamentId>" or "<siteSlug>:<date>:<hash>"; NULL for web-app rows
+  source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'desktop')), -- provenance: web app vs desktop companion
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -69,6 +71,10 @@ CREATE TABLE IF NOT EXISTS tournaments (
 -- Index for faster user queries
 CREATE INDEX IF NOT EXISTS tournaments_user_id_idx ON tournaments(user_id);
 CREATE INDEX IF NOT EXISTS tournaments_date_idx ON tournaments(date DESC);
+-- Partial unique index: a repeat desktop capture can never create a duplicate row
+CREATE UNIQUE INDEX IF NOT EXISTS tournaments_user_external_id_idx
+  ON tournaments(user_id, external_id)
+  WHERE external_id IS NOT NULL;
 
 -- ============================================
 -- HORSES TABLE (Staking)
