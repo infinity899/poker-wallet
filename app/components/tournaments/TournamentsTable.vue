@@ -60,6 +60,9 @@
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm text-foreground dark:text-foreground-dark">
               {{ tournament.name }}
+              <span v-if="tournament.source === 'desktop'" class="ml-2 badge-neutral badge-pill text-2xs">
+                Added from desktop
+              </span>
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm">
               <span

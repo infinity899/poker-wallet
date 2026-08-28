@@ -11,6 +11,9 @@
       <h1 class="text-xl font-semibold text-foreground dark:text-foreground-dark tracking-tight">
         {{ tournament?.isSession ? 'Edit Session' : 'Edit Tournament' }}
       </h1>
+      <span v-if="tournament?.source === 'desktop'" class="badge-neutral badge-pill">
+        Added from desktop
+      </span>
     </div>
 
     <form class="space-y-5" @submit.prevent="handleSubmit">

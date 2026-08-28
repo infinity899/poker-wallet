@@ -15,6 +15,9 @@
             <p class="font-semibold text-foreground dark:text-foreground-dark">
               {{ tournament.name }}
             </p>
+            <span v-if="tournament.source === 'desktop'" class="badge-neutral badge-pill text-2xs">
+              Added from desktop
+            </span>
             <p class="text-sm text-foreground-muted dark:text-foreground-dark-muted">
               {{ formatDate(tournament.date) }}<template v-if="!tournament.isSession">
                 &middot; {{ formatTournamentCurrency((tournament.originalBuyIn ?? tournament.buyIn) + (tournament.originalFee ?? tournament.fee), tournament) }}
