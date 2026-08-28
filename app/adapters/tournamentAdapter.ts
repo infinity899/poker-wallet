@@ -103,6 +103,12 @@ export function createTournamentAdapter(
       if (tournament.exchangeRate !== undefined) {
         result.exchange_rate = tournament.exchangeRate;
       }
+      if (tournament.externalId !== undefined) {
+        result.external_id = tournament.externalId;
+      }
+      if (tournament.source !== undefined) {
+        result.source = tournament.source;
+      }
 
       return result as Partial<DbTournament>;
     },

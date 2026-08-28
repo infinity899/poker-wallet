@@ -101,6 +101,9 @@ export function dbTournamentToTournament(dbTournament: DbTournament): Tournament
     originalFee: dbTournament.original_fee ?? dbTournament.fee,
     originalWinnings: dbTournament.original_winnings ?? dbTournament.winnings,
     exchangeRate: dbTournament.exchange_rate ?? 1,
+    // Desktop capture provenance
+    externalId: dbTournament.external_id ?? undefined,
+    source: dbTournament.source ?? 'manual',
     createdAt: dbTournament.created_at,
     updatedAt: dbTournament.updated_at,
   };
@@ -135,6 +138,9 @@ export function tournamentToDbTournament(tournament: Omit<Tournament, 'id' | 'cr
     original_fee: tournament.originalFee ?? null,
     original_winnings: tournament.originalWinnings ?? null,
     exchange_rate: tournament.exchangeRate ?? null,
+    // Desktop capture provenance
+    external_id: tournament.externalId ?? null,
+    source: tournament.source ?? 'manual',
   };
 }
 
