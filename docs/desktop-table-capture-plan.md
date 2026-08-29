@@ -327,6 +327,49 @@ export async function updateCaptureMeta(jsonPath: string, patch: Partial<Capture
 - Order of operations in the `capture:extract` IPC handler: `captureWindow` → `saveCapture` (PNG + JSON with no extraction yet) → return the preview to the renderer immediately → `extractFromImage` → `updateCaptureMeta` with the extraction/model/usage. If extraction fails or the API key is missing, **the screenshot is still on disk** — that is the whole point.
 - The `WindowPicker` card also gets a secondary *Save only* action (no Claude call) for collecting negative cases (cash tables, lobbies) without paying for extraction.
 
+### Step 1.2c — Global capture accelerator (`hotkey.ts`) ✅ built 2026-08-29
+
+`CommandOrControl+Shift+C`, registered with `globalShortcut`. On macOS it shells out to
+`screencapture -w -o -x <tmp>`, which turns the cursor into a camera so the user **clicks the
+window they want** — the app can be in the background. The PNG is then saved through the same
+`saveCapture()` path as the picker.
+
+- **Electron cannot hook a global mouse click.** `globalShortcut` accepts keyboard accelerators
+  only; a true modifier+click hook needs a native module (uiohook / CGEventTap) *and* the Input
+  Monitoring TCC permission on top of Screen Recording. Handing off to the OS capture avoids both.
+- **`screencapture` DOES inherit the app's Screen Recording grant** (verified 2026-08-29 — two
+  captures at 1512×949). macOS attributes a child's TCC request to the responsible parent app.
+  An earlier reading of `"could not create image from window"` as proof of the opposite was
+  wrong: the app had simply lost its own grant at that moment. **A failure here means this app
+  is unpermissioned, not that the hand-off is impossible.**
+- **Hotkey captures have an empty `windowTitle`** — `screencapture` reports nothing about which
+  window was picked — so they are tagged `source: 'hotkey'` in the sidecar to distinguish that
+  from a genuine read failure. Consequence for step 1.3: those captures send the image with no
+  title hint. Acceptable, since the title was only ever a hint and a captured window almost
+  always shows its own title bar; the review form just cannot prefill the site from it.
+- On failure the error is surfaced *and* the window list is brought forward, so the keystroke
+  always does something. Non-macOS has no `screencapture`: it surfaces the picker instead.
+
+### Step 1.2d — Screen Recording grant is lost on every rebuild (accepted workflow)
+
+The mac build is **ad-hoc signed** (`codesign --sign -`), whose identity is the binary's own
+hash — so every `npm run build:mac` is a different app to macOS, the grant is dropped, and the
+Screen Recording list entry disappears. A stale TCC record can also suppress the re-prompt.
+
+**The user has chosen to re-grant manually after each rebuild** rather than adopt a signing
+identity. The recovery sequence is:
+
+```bash
+tccutil reset ScreenCapture com.pokerwallet.desktop
+pkill -f "Poker Wallet Desktop"
+open "dist/mac-arm64/Poker Wallet Desktop.app"     # then Allow, quit, reopen
+```
+
+*Not adopted, recorded only so it is not re-proposed:* a self-signed Code Signing certificate
+would key the grant to a stable certificate identity and survive rebuilds. Deliberate trade-off
+— manual re-granting is accepted in exchange for zero signing setup. **Batch desktop changes
+into one build** to keep the re-grant count low.
+
 ### Step 1.3 — `extract.ts`
 ```ts
 import Anthropic from '@anthropic-ai/sdk';
@@ -466,7 +509,7 @@ contextBridge.exposeInMainWorld('api', {
 - `InProgressList.vue` rows show `entries` as a badge (*"2 entries"*) when `> 0` so a re-entry is visibly recorded.
 - `InProgressList.vue`: read-only list for v1.
 - `SettingsForm.vue`: Supabase URL + anon key (defaults hard-coded to the production project so the user only pastes them once if they change), a **Sign in with Google** button (shows the signed-in email + *Sign out* once authenticated), Anthropic key, **model dropdown** (labels from `EXTRACTION_MODELS`, default Sonnet 5), exchange-rate key, **captures folder** with *Open folder*, screen-permission status (macOS only).
-- Global shortcut `CommandOrControl+Shift+P` shows/focuses the app on the Capture tab. Tray icon with *Capture…* / *Quit*. Closing the window hides it instead of quitting.
+- Global shortcut: see step 1.2c — `CommandOrControl+Shift+C` is already built and does the camera-cursor capture. Tray icon with *Capture…* / *Quit*. Closing the window hides it instead of quitting.
 
 ### Step 1.8 — Fixture harness (do this before polishing the UI)
 - `test/fixtures/*.png` + sibling `*.json` — **copied straight from the captures folder** (step 1.2b) — no manual screenshots. Target set: PokerStars table, PokerStars lobby, GG table, a cash table as a negative case, anything else the user plays. `scripts/import-fixtures.ts <captures-dir>` copies the newest N pairs in and strips `extraction`/`usage` from the JSON so they can't leak the previous answer into the expected file.
