@@ -284,7 +284,9 @@ export async function captureWindow(sourceId: string): Promise<Buffer> {
   return source.thumbnail.toPNG();
 }
 ```
-- **macOS**: `getSources` returns windows with **empty names** until Screen Recording permission is granted. The Settings tab must show `screenPermissionStatus()` and a button that calls `shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture')`. The app must be **restarted** after granting — say so in the UI.
+- **macOS 15+ (verified on 26.2 / Electron 39.8.10): capture CANNOT be tested from `npm run dev`.** An unsigned dev binary launched from a terminal gets no permission dialog at all — `getSources` rejects immediately with the bare string `"Failed to get sources."` for both `window` and `screen` types, and `tccutil reset` does not help because there is no grantable identity. **Always test capture against a packaged build** (`npm run build:mac`, then launch `dist/mac-arm64/Poker Wallet Desktop.app`). The packaged app has its own bundle id (`com.pokerwallet.desktop`) and appears in the permission list under its own name, so macOS prompts normally.
+- **Ad-hoc signing is mandatory, not cosmetic.** electron-builder runs with `identity: null`, which ships a fully unsigned app; macOS TCC keys the Screen Recording grant on a code signature, so an unsigned build cannot hold the permission. `build/afterPack.cjs` runs `codesign --force --deep --sign -` before the DMG is assembled. **Verified: the grant survives a rebuild** with the hook in place.
+- **macOS**: on older versions `getSources` returns windows with **empty names** until Screen Recording is granted. The Settings tab must show `screenPermissionStatus()` and a button that calls `shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture')`. The app must be **restarted** after granting — say so in the UI. Note `getMediaAccessStatus('screen')` only ever returns `granted`/`denied` (never `not-determined`), so a `denied` reading right after a reset is not evidence of anything — only an actual capture attempt is.
 - **Windows**: no permission prompt; `screenPermissionStatus()` returns `'n/a'` and the Settings row is hidden. Known risk: some GPU-composited windows come back as a **black thumbnail** from `desktopCapturer`. Mitigation, implemented in Phase 1 only if a fixture shows it: detect an all-black PNG (sample 64 pixels via `nativeImage.getBitmap()`), and fall back to `getSources({ types: ['screen'] })` + a crop rectangle chosen by the user in a one-off overlay. PokerStars (Qt) and GGPoker (Chromium) are expected to capture normally.
 - Poll `listWindows()` every 2 s while the Capture tab is visible; stop when hidden.
 
@@ -474,10 +476,11 @@ contextBridge.exposeInMainWorld('api', {
 ### Step 1.9 — Verify Phase 1
 
 **Milestone 1a — capture-only build (ship this first, before 1.3–1.7).** Steps 1.1, 1.2, 1.2b, the `WindowPicker`, and a Settings tab with only the captures folder. No API key, no Supabase.
-1. `npm run dev` on **macOS** → grant Screen Recording → restart → poker client windows appear first in the picker with readable thumbnails. Repeat on **Windows** → no permission step, same result, thumbnails are not black.
-2. Click a table → a PNG and a JSON with the same basename appear in *Pictures/Poker Wallet Captures* within a second; the PNG opens and the title-bar text is legible; the JSON has `windowTitle`, `platform`, `capturedAt`.
+1. **macOS — use a packaged build, not `npm run dev`** (see step 1.2): `npm run build:mac` → launch `dist/mac-arm64/Poker Wallet Desktop.app` → click Allow on the *"Poker Wallet Desktop would like to record this computer's screen"* dialog → quit and relaunch → windows appear in the picker with readable thumbnails. On **Windows** `npm run dev` is fine: no permission step, the Screen recording row is hidden, and thumbnails must not be black.
+2. Click a table → a PNG and a JSON with the same basename appear in *Pictures/Poker Wallet Captures* within a second; the PNG opens and the title-bar text is legible; the JSON has `windowTitle`, `platform`, `capturedAt`. **✅ Verified 2026-08-29 on macOS 26.2** — 1600×957 PNG, text legible at that width, sidecar JSON correct.
 3. Click a lobby and a cash table with *Save only* → files appear, no error.
 4. The user plays a normal session with the build running and clicks every table once → the captures folder is the fixture set for 1.8.
+5. Rebuild (`npm run build:mac`) and capture again → still works without a new prompt, proving the ad-hoc signature held the grant. **✅ Verified 2026-08-29.**
 
 **Milestone 1b — full flow.**
 5. Click a PokerStars tournament table → within ~5 s the review form shows site = PokerStars, correct buy-in/currency, `confidence` high; `notes` explains any missing split. The sidecar JSON now also contains `extraction`, `model`, `usage`.
@@ -501,7 +504,7 @@ contextBridge.exposeInMainWorld('api', {
 - "Trust high-confidence" toggle in Settings: when on, a `confidence === 'high'` registration is inserted immediately with a toast that offers *Undo* (delete the row) for 10 s.
 
 ## Out of scope (explicitly)
-- Hand-history / tournament-summary file parsing, window-title regex extraction, lobby-based re-entry detection (re-entries are recorded by re-capturing the table — see step 1.4), multi-user sharing, code-signing / notarization / auto-update on either platform (unsigned `electron-builder` installers for now — Windows SmartScreen and macOS Gatekeeper will warn on first launch).
+- Hand-history / tournament-summary file parsing, window-title regex extraction, lobby-based re-entry detection (re-entries are recorded by re-capturing the table — see step 1.4), multi-user sharing, **Developer ID signing / notarization / auto-update** (the mac build is ad-hoc signed — required for TCC, see step 1.2 — but not notarized, so Gatekeeper still warns on first launch; Windows installers are unsigned and SmartScreen will warn).
 
 ## Open questions
 None. All product questions were answered on 2026-08-28 (sites, Google OAuth on desktop, local scaffold, re-entry = re-capture).
