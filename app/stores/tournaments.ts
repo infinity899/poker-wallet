@@ -1,8 +1,10 @@
+import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { LocalStorageAdapter } from '~/adapters/LocalStorageAdapter';
 import type { StorageAdapter } from '~/adapters/types';
-import type { Currency, NewTournament, Result, SessionType, Tournament, TournamentFilters, TournamentStats } from '~/types';
+import type { Currency, DbTournament, NewTournament, Result, SessionType, Tournament, TournamentFilters, TournamentStats } from '~/types';
 import { defineStore } from 'pinia';
 import { createTournamentAdapter } from '~/adapters/tournamentAdapter';
+import { dbTournamentToTournament } from '~/composables/useDatabase';
 import { matchesTournamentFilters } from '~/composables/useFilters';
 import { useTypedSupabaseClient } from '~/composables/useTypedSupabase';
 import { DEFAULT_TOURNAMENT_FILTERS } from '~/types';
@@ -25,6 +27,13 @@ export const useTournamentsStore = defineStore('tournaments', () => {
 
   // Check if we're in demo mode
   const isDemoMode = computed(() => getAuthStore().isDemoMode);
+
+  /**
+   * The live-updates channel, or null when there is none - demo mode, signed out, or a
+   * subscription that has been torn down. Deliberately a plain variable: it is a handle to
+   * a socket, nothing renders from it, and making it reactive would only invite watchers.
+   */
+  let channel: RealtimeChannel | null = null;
 
   // Get the appropriate adapter based on mode
   function getAdapter(): StorageAdapter<Tournament> {
@@ -96,6 +105,69 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     return tournaments.value.filter(t => t.status === 'in_progress');
   });
 
+  /**
+   * Merge a row that changed somewhere other than here: the desktop companion registering a
+   * table, a phone, a second browser tab.
+   *
+   * Keyed on id and idempotent, so the echo of this tab's own insert - every write here comes
+   * back over the socket too - lands on the row it already has instead of duplicating it.
+   */
+  function applyRemoteChange(payload: RealtimePostgresChangesPayload<DbTournament>): void {
+    if (payload.eventType === 'DELETE') {
+      // Postgres sends only the replica identity for a delete, so `old` carries the id.
+      const deletedId = (payload.old as Partial<DbTournament>).id;
+      if (deletedId) {
+        tournaments.value = tournaments.value.filter(t => t.id !== deletedId);
+      }
+      return;
+    }
+
+    const row = payload.new as DbTournament;
+    if (!row?.id) {
+      return;
+    }
+
+    const incoming = dbTournamentToTournament(row);
+    const index = tournaments.value.findIndex(t => t.id === incoming.id);
+    if (index === -1) {
+      tournaments.value.push(incoming);
+    }
+    else {
+      tournaments.value[index] = incoming;
+    }
+  }
+
+  /**
+   * Subscribe to this user's tournament rows, so one registered elsewhere shows up here
+   * without a refresh - the point of the desktop companion is that capturing a table is the
+   * whole interaction, and an open phone or browser that still needs a reload undoes that.
+   *
+   * Supabase mode only: demo mode has no server to hear from. The filter is server-side, and
+   * RLS applies on top of it, so the socket only ever carries rows this user may read.
+   */
+  function subscribeToChanges(): void {
+    const userId = user.value?.sub;
+    if (channel || isDemoMode.value || !userId) {
+      return;
+    }
+
+    channel = supabase
+      .channel(`tournaments:${userId}`)
+      .on<DbTournament>(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tournaments', filter: `user_id=eq.${userId}` },
+        applyRemoteChange,
+      )
+      .subscribe();
+  }
+
+  function unsubscribeFromChanges(): void {
+    if (channel) {
+      void supabase.removeChannel(channel);
+      channel = null;
+    }
+  }
+
   // Actions
   async function initialize(): Promise<void> {
     if (initialized.value) {
@@ -127,12 +199,19 @@ export const useTournamentsStore = defineStore('tournaments', () => {
       loading.value = false;
       initialized.value = true;
     }
+
+    // After the fetch, because the fetch REPLACES the array wholesale: an event applied while
+    // it was still in flight would be thrown away by that assignment anyway.
+    subscribeToChanges();
   }
 
   async function reload(): Promise<void> {
     initialized.value = false;
     tournaments.value = [];
     error.value = null;
+    // Demo mode is the reason `reload()` is usually called, and the channel belongs to the
+    // other mode; dropping it here lets `initialize()` decide whether there should be one.
+    unsubscribeFromChanges();
     await initialize();
   }
 
@@ -287,6 +366,16 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     return getTournamentNetProfit(t);
   }
 
+  // The channel is filtered by user id, so it cannot outlive the user it was opened for.
+  // Signing in from an already-loaded page opens the replacement here; on sign-out there is
+  // nothing to listen for and the socket goes with it.
+  watch(() => user.value?.sub, () => {
+    unsubscribeFromChanges();
+    if (initialized.value) {
+      subscribeToChanges();
+    }
+  });
+
   return {
     // State
     tournaments: readonly(tournaments),
@@ -318,5 +407,7 @@ export const useTournamentsStore = defineStore('tournaments', () => {
     importTournaments,
     clearAll,
     getTournamentProfit,
+    subscribeToChanges,
+    unsubscribeFromChanges,
   };
 });

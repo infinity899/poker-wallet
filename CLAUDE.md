@@ -131,6 +131,11 @@ All data stores use the Adapter Pattern and return `Result<T>` from actions.
 ### useTournamentsStore
 - Same pattern as sessions store
 - Additional: `inProgressTournaments` getter
+- **Live updates (Supabase mode only)**: `initialize()` opens a Realtime `postgres_changes`
+  channel filtered to the signed-in user and merges each change **by id**, so a tournament
+  registered on another device — notably the desktop capture app — appears without a refresh.
+  Merging by id makes the echo of this tab's own insert a no-op. Requires the table to be in
+  the `supabase_realtime` publication (see `supabase/migrations/20260831_enable_tournaments_realtime.sql`).
 
 ### useHorsesStore
 - Manages both horses and horse transactions

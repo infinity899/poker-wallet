@@ -536,7 +536,7 @@ contextBridge.exposeInMainWorld('api', {
 ---
 
 ## Phase 2 — Quality of life
-- **Auto-refresh in the web app**: subscribe to Supabase Realtime `postgres_changes` on `tournaments` filtered by `user_id` in `useTournamentsStore.initialize()` (Supabase mode only) and call `reload()` on insert/update, so a tournament added from the desktop appears on an open phone/browser without a refresh. Guard with a feature flag in `useAuthStore` settings if it proves noisy.
+- **Auto-refresh in the web app** ✅ built 2026-08-31: `useTournamentsStore` subscribes to Supabase Realtime `postgres_changes` on `tournaments` filtered by `user_id` (Supabase mode only) and merges each row **by id** rather than calling `reload()` — the plan's original wording — because a full refetch on every insert also throws away the echo of this tab's own write, flashes the loading state, and costs a round trip per event. Merging by id is idempotent, so an echo is a no-op. Needs `supabase/migrations/20260831_enable_tournaments_realtime.sql` applied by hand (publication membership + `REPLICA IDENTITY FULL`, without which a DELETE never matches the `user_id` filter). No feature flag: the channel is silent by design — rows appear, nothing is announced.
 - **Batch capture**: multi-select several tables → one extraction call per window in parallel (`Promise.allSettled`) → a multi-row review table → one *Add all*.
 - **Pre-fill from site preferences**: remember the last used currency per site so `currency: null` extractions default sensibly.
 - **Cost meter**: sum `usage` per day in the Settings tab.

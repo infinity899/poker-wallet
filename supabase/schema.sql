@@ -275,3 +275,26 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- ============================================
+-- REALTIME
+-- ============================================
+-- The web app subscribes to its own tournament rows so one registered elsewhere
+-- (the desktop companion, another device) appears without a refresh. Realtime
+-- applies the same RLS policies as a SELECT, so nothing here widens access.
+-- REPLICA IDENTITY FULL puts the whole old row in the WAL, which is what lets a
+-- DELETE match a `user_id=eq.<uid>` subscription filter.
+ALTER TABLE tournaments REPLICA IDENTITY FULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename = 'tournaments'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE tournaments;
+  END IF;
+END
+$$;
