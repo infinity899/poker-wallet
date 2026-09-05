@@ -87,14 +87,17 @@
                 -
               </template>
               <template v-else>
+                <!-- Badge sits before the amount so amounts stay flush right across rows -->
                 <span class="inline-flex items-center justify-end gap-1.5">
-                  {{ formatTournamentCurrency((tournament.originalBuyIn ?? tournament.buyIn) + (tournament.originalFee ?? tournament.fee), tournament) }}
                   <span
                     v-if="tournament.entries > 0"
                     class="badge-warning font-mono font-semibold"
                     :title="getEntriesTitle(tournament)"
                   >
                     &times;{{ getTournamentEntryCount(tournament) }}
+                  </span>
+                  <span>
+                    {{ formatTournamentCurrency((tournament.originalBuyIn ?? tournament.buyIn) + (tournament.originalFee ?? tournament.fee), tournament) }}
                   </span>
                 </span>
               </template>
