@@ -14,6 +14,8 @@ import {
   calculateTripPnL,
   calculateTripsStats,
   calculateWinningsBySite,
+  getTotalEntries,
+  getTournamentEntryCount,
   getTournamentNetProfit,
   roundToCents,
 } from '../calculations';
@@ -354,6 +356,30 @@ describe('calculateROITrend', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0]?.roi).toBe(100); // (400-200)/200 * 100
+  });
+});
+
+describe('getTournamentEntryCount', () => {
+  it('counts the initial entry when there are no re-entries', () => {
+    expect(getTournamentEntryCount({ entries: 0 })).toBe(1);
+  });
+
+  it('adds one per re-entry', () => {
+    expect(getTournamentEntryCount({ entries: 2 })).toBe(3);
+  });
+
+  it('treats a missing entries value as a single entry', () => {
+    expect(getTournamentEntryCount({ entries: undefined as unknown as number })).toBe(1);
+  });
+});
+
+describe('getTotalEntries', () => {
+  it('returns 0 for an empty list', () => {
+    expect(getTotalEntries([])).toBe(0);
+  });
+
+  it('sums entries across tournaments, counting each at least once', () => {
+    expect(getTotalEntries([{ entries: 0 }, { entries: 1 }, { entries: 3 }])).toBe(7);
   });
 });
 

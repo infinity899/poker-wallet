@@ -5,7 +5,9 @@
         Tournaments
       </h1>
       <p class="text-foreground-muted dark:text-foreground-dark-muted text-sm mt-0.5">
-        {{ count }} tournaments
+        {{ count }} {{ count === 1 ? 'tournament' : 'tournaments' }}<template v-if="totalEntries !== undefined && totalEntries > count">
+          <span class="mx-1.5" aria-hidden="true">&middot;</span>{{ totalEntries }} entries
+        </template>
       </p>
     </div>
     <div class="flex gap-2">
@@ -22,6 +24,8 @@
 <script setup lang="ts">
 defineProps<{
   count: number;
+  /** Sum of entries (1 + re-entries per tournament). Shown when it exceeds `count`. */
+  totalEntries?: number;
 }>();
 
 const emit = defineEmits<{

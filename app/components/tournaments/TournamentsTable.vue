@@ -87,7 +87,16 @@
                 -
               </template>
               <template v-else>
-                {{ formatTournamentCurrency((tournament.originalBuyIn ?? tournament.buyIn) + (tournament.originalFee ?? tournament.fee), tournament) }}
+                <span class="inline-flex items-center justify-end gap-1.5">
+                  {{ formatTournamentCurrency((tournament.originalBuyIn ?? tournament.buyIn) + (tournament.originalFee ?? tournament.fee), tournament) }}
+                  <span
+                    v-if="tournament.entries > 0"
+                    class="badge-warning font-mono font-semibold"
+                    :title="getEntriesTitle(tournament)"
+                  >
+                    &times;{{ getTournamentEntryCount(tournament) }}
+                  </span>
+                </span>
               </template>
             </td>
             <td class="px-4 py-3 whitespace-nowrap text-sm">
@@ -233,6 +242,7 @@
 import type { Tournament } from '~/types';
 import type { TournamentSiteEntry } from '~/types/tournament';
 import { CheckIcon, ChevronDownIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
+import { getTournamentEntryCount } from '~/utils/calculations';
 import { formatCurrency as formatCurrencyUtil, formatDate, formatPosition, formatProfit as formatProfitUtil } from '~/utils/formatters';
 
 defineProps<{
@@ -280,8 +290,17 @@ function getOriginalTournamentProfit(tournament: Tournament): number {
   const buyIn = tournament.originalBuyIn ?? tournament.buyIn;
   const fee = tournament.originalFee ?? tournament.fee;
   const winnings = tournament.originalWinnings ?? tournament.winnings;
-  const totalBuyIn = (buyIn + fee) * (tournament.entries + 1);
+  const totalBuyIn = (buyIn + fee) * getTournamentEntryCount(tournament);
   return winnings - totalBuyIn;
+}
+
+// Tooltip for the re-entry multiplier: "2 re-entries · $327 total"
+function getEntriesTitle(tournament: Tournament): string {
+  const buyIn = tournament.originalBuyIn ?? tournament.buyIn;
+  const fee = tournament.originalFee ?? tournament.fee;
+  const total = (buyIn + fee) * getTournamentEntryCount(tournament);
+  const label = tournament.entries === 1 ? '1 re-entry' : `${tournament.entries} re-entries`;
+  return `${label} · ${formatTournamentCurrency(total, tournament)} total`;
 }
 
 const tournamentsStore = useTournamentsStore();

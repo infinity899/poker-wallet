@@ -2,6 +2,7 @@
   <div class="p-4 lg:p-0 space-y-6">
     <TournamentsHeader
       :count="tournamentsStore.filteredTournaments.length"
+      :total-entries="getTotalEntries(tournamentsStore.filteredTournaments)"
       @log-session="openSessionModal"
     />
     <TournamentsFilterBar
@@ -57,6 +58,7 @@
 <script setup lang="ts">
 import type { Currency, SessionStatus, SessionType, Tournament, TournamentBreakdown } from '~/types';
 import type { TournamentSiteEntry } from '~/types/tournament';
+import { getTotalEntries } from '~/utils/calculations';
 import { breakdownLabel, groupTournaments } from '~/utils/tournamentGrouping';
 
 const tournamentsStore = useTournamentsStore();

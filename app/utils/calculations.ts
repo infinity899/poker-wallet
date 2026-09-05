@@ -115,10 +115,24 @@ export function calculateSessionStats(sessions: CashSession[]): SessionStats {
 }
 
 /**
+ * Number of times a tournament was entered: the initial entry plus every re-entry.
+ */
+export function getTournamentEntryCount(t: Pick<Tournament, 'entries'>): number {
+  return (t.entries || 0) + 1;
+}
+
+/**
+ * Total entries across a list of tournaments (each counts at least 1).
+ */
+export function getTotalEntries(tournaments: Pick<Tournament, 'entries'>[]): number {
+  return tournaments.reduce((sum, t) => sum + getTournamentEntryCount(t), 0);
+}
+
+/**
  * Total cost of a tournament including fees and re-entries.
  */
 export function getTournamentCost(t: Tournament): number {
-  return (t.buyIn + t.fee) * (t.entries + 1);
+  return (t.buyIn + t.fee) * getTournamentEntryCount(t);
 }
 
 /**

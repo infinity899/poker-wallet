@@ -21,6 +21,12 @@
             <p class="text-sm text-foreground-muted dark:text-foreground-dark-muted">
               {{ formatDate(tournament.date) }}<template v-if="!tournament.isSession">
                 &middot; {{ formatTournamentCurrency((tournament.originalBuyIn ?? tournament.buyIn) + (tournament.originalFee ?? tournament.fee), tournament) }}
+                <span
+                  v-if="tournament.entries > 0"
+                  class="badge-warning font-mono font-semibold ml-1 align-middle"
+                >
+                  &times;{{ getTournamentEntryCount(tournament) }}
+                </span>
               </template>
             </p>
           </div>
@@ -191,6 +197,7 @@
 import type { Tournament } from '~/types';
 import type { TournamentSiteEntry } from '~/types/tournament';
 import { CheckIcon, ChevronDownIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
+import { getTournamentEntryCount } from '~/utils/calculations';
 import { formatCurrency as formatCurrencyUtil, formatDate, formatPosition, formatProfit as formatProfitUtil } from '~/utils/formatters';
 
 defineProps<{
@@ -226,7 +233,7 @@ function getOriginalTournamentProfit(tournament: Tournament): number {
   const buyIn = tournament.originalBuyIn ?? tournament.buyIn;
   const fee = tournament.originalFee ?? tournament.fee;
   const winnings = tournament.originalWinnings ?? tournament.winnings;
-  const totalBuyIn = (buyIn + fee) * (tournament.entries + 1);
+  const totalBuyIn = (buyIn + fee) * getTournamentEntryCount(tournament);
   return winnings - totalBuyIn;
 }
 
