@@ -68,7 +68,8 @@ const { formatAmount } = useCurrency();
 
 const deleteConfirmId = ref<string | null>(null);
 const showSessionModal = ref(false);
-const breakdown = ref<TournamentBreakdown>('none');
+// Survives the round trip to an edit page so the list comes back as it was left.
+const breakdown = useState<TournamentBreakdown>('tournaments-breakdown', () => 'none');
 
 // The table mirrors the chart: same filtered set, same split, same colors.
 const breakdownGroups = computed(() =>
