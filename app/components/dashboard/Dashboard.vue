@@ -12,8 +12,7 @@
       :total-profit="totalProfit"
       :total-entries="totalEntries"
       :win-rate="winRate"
-      :hourly-rate="hourlyRate"
-      :include-expenses="includeExpenses"
+      :avg-result="avgResult"
     />
 
     <DashboardProfitChart :chart-data="combinedChartData" />
@@ -37,6 +36,7 @@ import {
   Title,
   Tooltip,
 } from 'chart.js';
+import { getTotalEntries, getTournamentNetProfit } from '~/utils/calculations';
 import { formatDateShort } from '~/utils/formatters';
 
 ChartJS.register(
@@ -93,17 +93,29 @@ const filteredTournaments = computed(() => {
   });
 });
 
-const grossProfit = computed(() => {
-  const sessionProfit = filteredSessions.value.reduce(
-    (sum, s) => sum + s.result,
-    0,
-  );
-  const tournamentProfit = filteredTournaments.value.reduce((sum, t) => {
-    const cost = (t.buyIn + t.fee) * (t.entries + 1);
-    return sum + (t.winnings - cost);
-  }, 0);
-  return sessionProfit + tournamentProfit;
-});
+/*
+ * Play that has a result yet. An in-progress table has spent its buy-in but won
+ * nothing back, so counting it would report a loss that has not happened - the
+ * same exclusion trip P&L makes.
+ */
+const settledSessions = computed(() =>
+  filteredSessions.value.filter(s => s.status !== 'in_progress'));
+
+const settledTournaments = computed(() =>
+  filteredTournaments.value.filter(t => t.status !== 'in_progress'));
+
+/*
+ * One result per session or tournament, whatever it cost to get there. These
+ * back the cards that have to read the same for a cash player and a tournament
+ * player: how often play ends up ahead, and by how much on average.
+ */
+const results = computed(() => [
+  ...settledSessions.value.map(s => s.result),
+  ...settledTournaments.value.map(getTournamentNetProfit),
+]);
+
+const grossProfit = computed(() =>
+  results.value.reduce((sum, profit) => sum + profit, 0));
 
 // All logged trip expenses, in USD. Deliberately NOT filtered by the cash/tournament/
 // live/online toggles - an expense belongs to a trip, not to an individual entry.
@@ -116,31 +128,25 @@ const totalTripExpenses = computed(() =>
 // on. With the toggle off this is identical to the previous behaviour.
 const totalProfit = computed(() => grossProfit.value - totalTripExpenses.value);
 
-const totalEntries = computed(() => {
-  return filteredSessions.value.length + filteredTournaments.value.length;
-});
-
-const totalHours = computed(() => {
-  return filteredSessions.value.reduce((sum, s) => sum + s.duration, 0) / 60;
-});
-
-const hourlyRate = computed(() => {
-  if (totalHours.value === 0) {
-    return 0;
-  }
-  const sessionProfit = filteredSessions.value.reduce(
-    (sum, s) => sum + s.result,
-    0,
-  );
-  return sessionProfit / totalHours.value;
-});
+// Volume: every buy-in counts, re-entries included, the way the tournaments
+// page counts them.
+const totalEntries = computed(() =>
+  settledSessions.value.length + getTotalEntries(settledTournaments.value));
 
 const winRate = computed(() => {
-  if (filteredSessions.value.length === 0) {
+  if (results.value.length === 0) {
     return 0;
   }
-  const winning = filteredSessions.value.filter(s => s.result > 0).length;
-  return (winning / filteredSessions.value.length) * 100;
+  const winning = results.value.filter(profit => profit > 0).length;
+  return (winning / results.value.length) * 100;
+});
+
+// Follows Total Profit, so it nets out expenses when that toggle is on.
+const avgResult = computed(() => {
+  if (results.value.length === 0) {
+    return 0;
+  }
+  return totalProfit.value / results.value.length;
 });
 
 const recentSessions = computed(() => sessionsStore.sortedSessions.slice(0, 5));
@@ -152,7 +158,7 @@ const recentTournaments = computed(() =>
 const combinedChartData = computed(() => {
   // Get all cash session data points
   const cashData: { date: string; profit: number; type: 'cash' | 'tournament' }[]
-    = filteredSessions.value.map(s => ({
+    = settledSessions.value.map(s => ({
       date: s.date,
       profit: s.result,
       type: 'cash' as const,
@@ -160,14 +166,11 @@ const combinedChartData = computed(() => {
 
   // Get all tournament data points
   const tournamentData: { date: string; profit: number; type: 'cash' | 'tournament' }[]
-    = filteredTournaments.value.map((t) => {
-      const cost = (t.buyIn + t.fee) * (t.entries + 1);
-      return {
-        date: t.date,
-        profit: t.winnings - cost,
-        type: 'tournament' as const,
-      };
-    });
+    = settledTournaments.value.map(t => ({
+      date: t.date,
+      profit: getTournamentNetProfit(t),
+      type: 'tournament' as const,
+    }));
 
   // Combine and sort all data by date
   const allData = [...cashData, ...tournamentData].sort(
